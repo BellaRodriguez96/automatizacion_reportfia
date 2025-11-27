@@ -60,7 +60,7 @@ driver = make_driver()
 wait = WebDriverWait(driver, 15)
 
 try:
-    print("🚀 INICIANDO PRUEBA FUN-06 - LOGIN")
+    print("🚀 INICIANDO PRUEBA FUN-06 - Registro de usuarios como estudiante")
     driver.get(BASE_URL)
     driver.maximize_window()
     time.sleep(1)
