@@ -206,5 +206,11 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# Selenium Chrome profiles (persist 2FA cookies)
-.chrome-profile-reportfia/
+# Chrome profile for ReportFIA automation
+.chrome-profile-reportfia/  
+
+# Otras configuraciones de editores y IDEs
+.vscode
+.idea
+*.sublime-project
+*.sublime-workspace
