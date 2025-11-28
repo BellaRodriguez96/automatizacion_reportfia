@@ -31,7 +31,7 @@ def make_driver():
 
 
 def aplicar_busqueda(driver, wait):
-    """Ejecuta la búsqueda del listado."""
+    """Ejecuta la busqueda del listado."""
     btn_buscar = wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
         "button[data-tooltip-target='tooltip-aplicar-filtros']"
@@ -42,38 +42,24 @@ def aplicar_busqueda(driver, wait):
 
     try:
         btn_buscar.click()
-        print("✔ Búsqueda ejecutada con click normal")
+        print(" Busqueda ejecutada con click normal")
     except:
-        print("⚠ Click interceptado, usando JavaScript")
+        print(" Click interceptado, usando JavaScript")
         driver.execute_script("arguments[0].click();", btn_buscar)
 
-    print("✔ Búsqueda ejecutada correctamente")
+    print(" Busqueda ejecutada correctamente")
     time.sleep(1)   # <-- diferencias de 1 segundo entre filtros
 
-def scroll_to_element(driver):
-    print("📜 Moviendo scroll hacia abajo...")
-
-    # SCROLL HASTA ABAJO
-    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-    time.sleep(3)
-
-    print("📜 Moviendo scroll hacia arriba...")
-
-    # SCROLL HASTA ARRIBA
-    driver.execute_script("window.scrollTo(0, 0);")
-    time.sleep(1)
-
-    print("✔ Scroll completado")
 
 # ======================
-#  EJECUCIÓN PRINCIPAL
+#  EJECUCION PRINCIPAL
 # ======================
 
 driver = make_driver()
 wait = WebDriverWait(driver, 15)
 
 try:
-    print("🚀 INICIANDO PRUEBA FUN-38 - Filtrado de reportes")
+    print(" INICIANDO PRUEBA FUN-38 - Filtrado de reportes")
     driver.get(BASE_URL)
     time.sleep(1)
 
@@ -86,28 +72,28 @@ try:
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         time.sleep(0.5)
     else:
-        print("✔ Sesión ya iniciada, saltando login...")
+        print(" Sesion ya iniciada, saltando login...")
 
     # NAVEGAR A REPORTES
-    print("📂 Abriendo menú Reportes...")
+    print(" Abriendo menu Reportes...")
     wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
         "button[data-collapse-toggle='reportes-dropdown']"
     ))).click()
 
     time.sleep(0.5)
-    print("✔ Menú Reportes desplegado")
+    print(" Menu Reportes desplegado")
 
     wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
         "a[href='/reportes/listado-general'], a[href='https://reportfia.deras.dev/reportes/listado-general']"
     ))).click()
 
-    print("✔ Navegado a Reportes → Listado General")
+    print(" Navegado a Reportes  Listado General")
     time.sleep(0.8)
     
     # ===============================
-    #   FILTRO 1 — Últimos 7 días
+    #   FILTRO 1  Ultimos 7 dias
     # ===============================
     # 1) Abrir el dropdown
     btn_fecha = wait.until(
@@ -121,7 +107,7 @@ try:
         EC.visibility_of_element_located((By.ID, "dropdownRadio"))
     )
 
-    # 3) Ahora sí podemos seleccionar “Últimos 7 días”
+    # 3) Ahora si podemos seleccionar Ultimos 7 dias
     radio_7dias = wait.until(
         EC.element_to_be_clickable((By.ID, "filter-radio-example-2"))
     )
@@ -136,35 +122,58 @@ try:
     btn_buscar.click()
 
     aplicar_busqueda(driver, wait)
-    scroll_to_element(driver)
     # ===============================
-    #   FILTRO 2 — Tipo de incidencia
+    #   FILTRO 2  Tipo de incidencia
     # ===============================
-    print("📌 Filtro 2 → Problemas con baños")
+    print(" Filtro 2  Problemas con baños")
 
-    # 1️⃣ Click en el campo de búsqueda para ABRIR dropdown
+    driver.execute_script("window.scrollTo(0, 0);")
+    time.sleep(0.3)
+
+    # 1 Click en el campo de busqueda para ABRIR dropdown
     campo_tipo = wait.until(
         EC.element_to_be_clickable((By.ID, "search-tipoIncidencia"))
     )
-    driver.execute_script("arguments[0].scrollIntoView(true);", campo_tipo)
-    campo_tipo.click()
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", campo_tipo)
+    try:
+        campo_tipo.click()
+    except:
+        driver.execute_script("arguments[0].click();", campo_tipo)
     time.sleep(0.5)
 
-    # 2️⃣ Esperar a que el dropdown se muestre
-    dropdown = wait.until(
-        EC.visibility_of_element_located((By.ID, "dropdown-tipoIncidencia"))
+    # 2 Esperar a que el dropdown se muestre
+    wait.until(EC.visibility_of_element_located((By.ID, "dropdown-tipoIncidencia")))
+
+    campo_tipo.clear()
+    campo_tipo.send_keys("Problemas con baños")
+    time.sleep(0.5)
+
+    # 3 Seleccionar la opcion
+    opciones_visibles = wait.until(
+        EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#dropdown-tipoIncidencia li"))
     )
 
-    # 3️⃣ Seleccionar la opción
-    opcion_banos = wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//ul[@id='dropdown-tipoIncidencia']/li[contains(normalize-space(), 'Problemas con baños')]"))
-    )
+    opcion_banos = None
+    for opcion in opciones_visibles:
+        texto = opcion.text.strip().lower()
+        if "banos" in texto or "baños" in texto:
+            opcion_banos = opcion
+            break
 
-    driver.execute_script("arguments[0].scrollIntoView(true);", opcion_banos)
-    opcion_banos.click()
+    if opcion_banos is None and opciones_visibles:
+        opcion_banos = opciones_visibles[0]
+
+    if opcion_banos is None:
+        raise TimeoutException("No se encontraron opciones en el dropdown de tipo de incidencia.")
+
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", opcion_banos)
+    try:
+        opcion_banos.click()
+    except:
+        driver.execute_script("arguments[0].click();", opcion_banos)
     time.sleep(1)
 
-    # 4️⃣ Aplicar filtros
+    # 4 Aplicar filtros
     btn_buscar = wait.until(
         EC.element_to_be_clickable((By.CSS_SELECTOR,
         "button[data-tooltip-target='tooltip-aplicar-filtros']"))
@@ -172,15 +181,14 @@ try:
     btn_buscar.click()
     time.sleep(1)
 
-    print("✔ Tipo de incidencia seleccionado correctamente")
+    print(" Tipo de incidencia seleccionado correctamente")
 
     aplicar_busqueda(driver, wait)
-    scroll_to_element(driver)
 
     # ===============================
-    #   FILTRO 3 — Estado
+    #   FILTRO 3  Estado
     # ===============================
-    print("📌 Filtro 3 → Estado ASIGNADO")
+    print(" Filtro 3  Estado ASIGNADO")
 
     select_estado = wait.until(EC.element_to_be_clickable((By.ID, "estado")))
     sel = Select(select_estado)
@@ -188,12 +196,11 @@ try:
     time.sleep(1)
 
     aplicar_busqueda(driver, wait)
-    scroll_to_element(driver)
 
-    print("🎉 Todos los filtros aplicados correctamente")
+    print(" Todos los filtros aplicados correctamente")
 
     time.sleep(5)
 
 finally:
-    print("Cerrando navegador…")
+    print("Cerrando navegador...")
     driver.quit()

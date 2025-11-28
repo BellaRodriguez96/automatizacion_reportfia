@@ -5,7 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time, os, random, string, base64
 
 # ======================
-#  CONFIGURACIÓN GLOBAL
+#  CONFIGURACION GLOBAL
 # ======================
 
 BASE_URL = "https://reportfia.deras.dev/iniciar-sesion"
@@ -32,7 +32,7 @@ def make_driver():
 
 
 def crear_imagen_prueba():
-    """Genera un PNG pequeño para subir como comprobante."""
+    """Genera un PNG pequeno para subir como comprobante."""
     img_data = base64.b64decode(
         b'iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAHElEQVQoU2NkgIAgFo2BgYGB4T8mBgwGJQwMAE2YCxY3E8VgAAAAAElFTkSuQmCC'
     )
@@ -48,7 +48,7 @@ def generar_texto_aleatorio(base, longitud=6):
 
 
 def aplicar_busqueda(driver, wait):
-    """Ejecuta click en el botón Aplicar Filtros."""
+    """Ejecuta click en el boton Aplicar Filtros."""
     btn_buscar = wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
         "button[data-tooltip-target='tooltip-aplicar-filtros']"
@@ -62,7 +62,7 @@ def aplicar_busqueda(driver, wait):
     except:
         driver.execute_script("arguments[0].click();", btn_buscar)
 
-    print("✔ Búsqueda ejecutada")
+    print(" Busqueda ejecutada")
     time.sleep(1)
 
 
@@ -74,7 +74,7 @@ driver = make_driver()
 wait = WebDriverWait(driver, 15)
 
 try:
-    print("🚀 INICIANDO PRUEBA FUN-65 - Registro de reporte nuevo")
+    print(" INICIANDO PRUEBA FUN-65 - Registro de reporte nuevo")
     driver.get(BASE_URL)
     time.sleep(1)
 
@@ -89,12 +89,12 @@ try:
         driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
         time.sleep(1)
     else:
-        print("✔ Sesión ya iniciada")
+        print(" Sesion ya iniciada")
 
     # -----------------------------------------------------
     # NAVEGAR A REGISTRO DE REPORTES
     # -----------------------------------------------------
-    print("📂 Abriendo menú Reportes…")
+    print(" Abriendo menu Reportes...")
 
     wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR, "button[data-collapse-toggle='reportes-dropdown']"
@@ -111,7 +111,7 @@ try:
     # -----------------------------------------------------
     # SELECCIONAR INCIDENCIA ALEATORIA
     # -----------------------------------------------------
-    print("⏳ Seleccionando incidencia…")
+    print(" Seleccionando incidencia...")
 
     campo_inc = wait.until(EC.element_to_be_clickable((By.ID, "search-id_tipo_incidencia")))
     campo_inc.click()
@@ -132,7 +132,7 @@ try:
     ]
 
     if not li_items:
-        raise Exception("❌ No hay incidencias visibles")
+        raise Exception(" No hay incidencias visibles")
 
     item_random = random.choice(li_items)
     incidencia_texto = item_random.text.strip()
@@ -140,20 +140,20 @@ try:
     driver.execute_script("arguments[0].scrollIntoView({block:'center'});", item_random)
     driver.execute_script("arguments[0].click();", item_random)
 
-    print("✔ Incidencia seleccionada:", incidencia_texto)
+    print(" Incidencia seleccionada:", incidencia_texto)
 
     # -----------------------------------------------------
-    # DESCRIPCIÓN
+    # DESCRIPCION
     # -----------------------------------------------------
-    descripcion_texto = generar_texto_aleatorio("Reporte automático QA")
+    descripcion_texto = generar_texto_aleatorio("Reporte automatico QA")
     descripcion = wait.until(EC.presence_of_element_located((By.ID, "descripcion")))
     descripcion.send_keys(descripcion_texto)
-    print("✔ Descripción ingresada:", descripcion_texto)
+    print(" Descripcion ingresada:", descripcion_texto)
 
     # -----------------------------------------------------
     # LUGAR
     # -----------------------------------------------------
-    print("📍 Obteniendo lugares reales del sistema…")
+    print(" Obteniendo lugares reales del sistema...")
 
     input_lugar = wait.until(EC.element_to_be_clickable((By.ID, "lugar-input")))
     input_lugar.click()
@@ -167,7 +167,7 @@ try:
     lista_lugares = [l.text.strip() for l in lugares_reales if l.text.strip()]
     lugar_random = random.choice(lista_lugares)
 
-    print("✔ Lugar elegido aleatoriamente:", lugar_random)
+    print(" Lugar elegido aleatoriamente:", lugar_random)
 
     driver.execute_script("arguments[0].value='';", input_lugar)
     input_lugar.send_keys(lugar_random)
@@ -184,12 +184,12 @@ try:
     ruta_img = crear_imagen_prueba()
     campo_imagen = wait.until(EC.presence_of_element_located((By.ID, "comprobantes")))
     campo_imagen.send_keys(ruta_img)
-    print("✔ Imagen cargada")
+    print(" Imagen cargada")
 
     # -----------------------------------------------------
     # ENVIAR REPORTE
     # -----------------------------------------------------
-    print("📤 Enviando reporte…")
+    print(" Enviando reporte...")
 
     btn_enviar = wait.until(
         EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enviar reporte')]"))
@@ -202,19 +202,19 @@ try:
     )
 
     driver.execute_script("arguments[0].click();", btn_confirmar)
-    print("✔ Reporte enviado 🎉")
+    print(" Reporte enviado ")
 
-    # Notificación
+    # Notificacion
     try:
         notyf = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.notyf__message")))
-        print("🔔 Notificación:", notyf.text)
+        print(" Notificacion:", notyf.text)
     except:
-        print("⚠ No apareció notificación")
+        print(" No aparecio notificacion")
 
     # -----------------------------------------------------
     # REGRESAR AL LISTADO
     # -----------------------------------------------------
-    print("↩ Volviendo al listado…")
+    print(" Volviendo al listado...")
 
     try:
         wait.until(EC.url_contains("/reportes/listado-general"))
@@ -224,12 +224,12 @@ try:
         )
         driver.execute_script("arguments[0].click();", enlace_listado)
 
-    print("✔ Ya estamos en el listado")
+    print(" Ya estamos en el listado")
 
     # -----------------------------------------------------
-    # APLICAR FILTRO “HOY”
+    # APLICAR FILTRO HOY
     # -----------------------------------------------------
-    print("📅 Aplicando filtro HOY…")
+    print(" Aplicando filtro HOY...")
 
     btn_fecha = wait.until(EC.element_to_be_clickable((By.ID, "dropdownRadioButton")))
     btn_fecha.click()
@@ -244,5 +244,5 @@ try:
     time.sleep(4)
 
 finally:
-    print("Cerrando navegador…")
+    print("Cerrando navegador...")
     driver.quit()

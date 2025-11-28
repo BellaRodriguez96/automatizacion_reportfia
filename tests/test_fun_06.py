@@ -1,4 +1,3 @@
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -6,32 +5,24 @@ from selenium.webdriver.support.ui import Select
 import time, os, random, string
 from datetime import datetime, timedelta
 
+try:
+    from tests.test_fun_01 import login_if_needed, make_driver, report_test_result
+except ImportError:
+    from test_fun_01 import login_if_needed, make_driver, report_test_result
+
 # ======================
 #  VARIABLES GLOBALES
 # ======================
 BASE_URL = "https://reportfia.deras.dev/iniciar-sesion"
-URL_INICIO = "https://reportfia.deras.dev/inicio"
-USER_CARNET = "aa11001"
-USER_PASSWORD = "pass123"
-
-CHROME_PROFILE_DIR = os.path.abspath("./.chrome-profile-reportfia")
-CHROME_SUBPROFILE = "ReportFIAProfile"
+TEST_CODE = "FUN-06"
 
 # ======================
 #  UTILIDADES GENERALES
 # ======================
 
-def make_driver():
-    """Inicia Chrome con perfil persistente para evitar 2FA."""
-    options = webdriver.ChromeOptions()
-    options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
-    options.add_argument(f"--profile-directory={CHROME_SUBPROFILE}")
-    options.add_argument("--start-maximized")
-    return webdriver.Chrome(options=options)
-
 def generar_nombre():
-    nombres = ["Luis", "Ana", "Carlos", "María", "Fernanda", "José", "Diana", "Ricardo", "Valeria", "Héctor"]
-    apellidos = ["González", "Ramírez", "Hernández", "López", "Flores", "Martínez", "Castro", "Morales", "Vargas"]
+    nombres = ["Luis", "Ana", "Carlos", "Maria", "Fernanda", "Jose", "Diana", "Ricardo", "Valeria", "Hector"]
+    apellidos = ["Gonzalez", "Ramirez", "Hernandez", "Lopez", "Flores", "Martinez", "Castro", "Morales", "Vargas"]
     return random.choice(nombres), random.choice(apellidos)
 
 def generar_fecha_nacimiento():
@@ -53,41 +44,33 @@ def generar_correo(carnet):
 
 
 # ======================
-#  EJECUCIÓN PRINCIPAL
+#  EJECUCION PRINCIPAL
 # ======================
 
 driver = make_driver()
 wait = WebDriverWait(driver, 15)
+error = None
 
 try:
-    print("🚀 INICIANDO PRUEBA FUN-06 - Registro de usuarios como estudiante")
+    print(" INICIANDO PRUEBA FUN-06 - Registro de usuarios como estudiante")
     driver.get(BASE_URL)
     driver.maximize_window()
     time.sleep(1)
 
-    # LOGIN (si no existe sesión previa)
-    if URL_INICIO in driver.current_url:
-        print("✔ Sesión ya iniciada, saltando login...")
-    else:
-        input_user = wait.until(EC.presence_of_element_located((By.ID, "carnet")))
-        input_pass = wait.until(EC.presence_of_element_located((By.ID, "password")))
-        input_user.send_keys(USER_CARNET)
-        input_pass.send_keys(USER_PASSWORD)
-        driver.find_element(By.CSS_SELECTOR, "button[type='submit']").click()
-        time.sleep(0.5)
+    login_if_needed(driver, wait)
 
-    # NAVEGAR: Seguridad → Usuarios
-    print("📂 Abriendo menú Seguridad...")
+    # NAVEGAR: Seguridad  Usuarios
+    print(" Abriendo menu Seguridad...")
     wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-collapse-toggle='seguridad-dropdown']"))).click()
     time.sleep(0.5)
 
-    print("✔ Menú Seguridad desplegado")
+    print(" Menu Seguridad desplegado")
     wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
         "a[href='/seguridad/usuarios'], a[href='https://reportfia.deras.dev/seguridad/usuarios']"
     ))).click()
 
-    print("✔ Navegado a Seguridad → Usuarios")
+    print(" Navegado a Seguridad  Usuarios")
     time.sleep(0.5)
 
     wait.until(EC.element_to_be_clickable((By.ID, "add-button"))).click()
@@ -100,7 +83,7 @@ try:
     carnet = generar_carnet()
     correo = generar_correo(carnet)
 
-    print("🧪 Datos generados:")
+    print(" Datos generados:")
     print(nombre, apellido, fecha_nac, telefono, correo, carnet)
 
     # ========= LLENAR FORMULARIO =========
@@ -139,31 +122,31 @@ try:
         checkbox.click()
     time.sleep(0.2)
 
-    print("🎉 FORMULARIO ENVIADO CON ÉXITO")
+    print(" FORMULARIO ENVIADO CON EXITO")
 
     # Guardar
     wait.until(EC.element_to_be_clickable((By.ID, "guardar"))).click()
     time.sleep(2)
 
-    # Notificación
+    # Notificacion
     try:
         notyf = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.notyf__message")))
-        print("✔ Notificación:", notyf.text)
+        print(" Notificacion:", notyf.text)
     except:
-        print("⚠ No apareció notificación, continuando…")
+        print(" No aparecio notificacion, continuando...")
 
     wait.until(EC.url_contains("/seguridad/usuarios"))
-    print("✔ Regresó a Gestión de Usuarios")
+    print(" Regreso a Gestion de Usuarios")
 
     # ========= BUSCAR EL USUARIO =========
-    print("🔎 Buscando el usuario recién creado...")
+    print(" Buscando el usuario recien creado...")
 
     filtro = wait.until(EC.element_to_be_clickable((By.ID, "email-filter")))
     driver.execute_script("arguments[0].value='';", filtro)
     filtro.send_keys(correo)
     time.sleep(0.2)
 
-    print("🔎 Ejecutando búsqueda en tabla...")
+    print(" Ejecutando busqueda en tabla...")
 
     btn_buscar = wait.until(EC.element_to_be_clickable((
         By.CSS_SELECTOR,
@@ -175,14 +158,18 @@ try:
 
     try:
         btn_buscar.click()
-        print("✔ Búsqueda ejecutada con click normal")
+        print(" Busqueda ejecutada con click normal")
     except:
-        print("⚠ Click interceptado, usando click por JavaScript")
+        print(" Click interceptado, usando click por JavaScript")
         driver.execute_script("arguments[0].click();", btn_buscar)
 
-    print("✔ Búsqueda ejecutada correctamente")
+    print(" Busqueda ejecutada correctamente")
     time.sleep(10)
 
+except Exception as exc:
+    error = exc
+    raise
 finally:
-    print("Cerrando navegador…")
+    report_test_result(TEST_CODE, error)
+    print("Cerrando navegador...")
     driver.quit()

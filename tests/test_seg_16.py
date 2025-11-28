@@ -6,7 +6,7 @@ import time, os, shutil
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 
-# 🌐 VARIABLES GLOBALES
+#  VARIABLES GLOBALES
 BASE_URL = "https://reportfia.deras.dev/iniciar-sesion"
 USER_CARNET = "aa11001"
 
@@ -17,10 +17,10 @@ PASSWORDS_INVALIDAS = ["admin123", "1234", "pass123", None, "", "     ", "passwo
 
 
 def make_clean_driver():
-    print("🧹 Eliminando perfil persistente anterior…")
+    print(" Eliminando perfil persistente anterior...")
     shutil.rmtree(CHROME_PROFILE_DIR, ignore_errors=True)
 
-    print("Creando Chrome limpio…")
+    print("Creando Chrome limpio...")
     options = webdriver.ChromeOptions()
     options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
     options.add_argument(f"--profile-directory={CHROME_SUBPROFILE}")
@@ -33,11 +33,11 @@ def make_clean_driver():
 
 
 # --------------------------------------------------------
-#   FUNCIÓN: DETECTAR ERROR 500
+#   FUNCION: DETECTAR ERROR 500
 # --------------------------------------------------------
 def detecta_error_500(driver):
     html = driver.page_source.lower()
-    # Detecta por contenido típico
+    # Detecta por contenido tipico
     if "500 internal server error" in html:
         return True
     if "ha ocurrido un error inesperado" in html:
@@ -48,24 +48,24 @@ def detecta_error_500(driver):
 
 
 # --------------------------------------------------------
-#   EJECUCIÓN PRINCIPAL
+#   EJECUCION PRINCIPAL
 # --------------------------------------------------------
 driver = make_clean_driver()
 wait = WebDriverWait(driver, 10)
 
 try:
-    print("\n🚀 INICIANDO PRUEBA SEG-16 - Inicio de sesión con credenciales predeterminadas/débiles o en blanco")
+    print("\n INICIANDO PRUEBA SEG-16 - Inicio de sesion con credenciales predeterminadas/debiles o en blanco")
 
     prueba_fallida = False
 
     for pwd in PASSWORDS_INVALIDAS:
-        print(f"\n🔎 Probando contraseña inválida: {pwd}")
+        print(f"\n Probando contrasena invalida: {pwd}")
 
         driver.get(BASE_URL)
 
         # Detecta error 500 APENAS carga la pantalla
         if detecta_error_500(driver):
-            print("❌ ERROR 500 DETECTADO AL CARGAR EL LOGIN. PRUEBA FALLIDA.")
+            print(" ERROR 500 DETECTADO AL CARGAR EL LOGIN. PRUEBA FALLIDA.")
             prueba_fallida = True
             break
 
@@ -78,15 +78,15 @@ try:
         input_user.send_keys(USER_CARNET)
         input_pass.send_keys(pwd)
 
-        # Click en botón
+        # Click en boton
         btn_login = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
         btn_login.click()
 
         time.sleep(1)
 
-        # ⚠️ Detectar si se muestra pantalla 500
+        #  Detectar si se muestra pantalla 500
         if detecta_error_500(driver):
-            print("❌ ERROR 500 DETECTADO TRAS HACER LOGIN. PRUEBA FALLIDA.")
+            print(" ERROR 500 DETECTADO TRAS HACER LOGIN. PRUEBA FALLIDA.")
             prueba_fallida = True
             break
 
@@ -95,10 +95,10 @@ try:
             error_login = WebDriverWait(driver, 3).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "div.notyf__message"))
             )
-            print(f"✔ Correcto: contraseña '{pwd}' fue rechazada → {error_login.text}")
+            print(f" Correcto: contrasena '{pwd}' fue rechazada  {error_login.text}")
 
         except:
-            print(f"❌ ERROR GRAVE: La contraseña '{pwd}' PERMITIÓ el acceso.")
+            print(f" ERROR GRAVE: La contrasena '{pwd}' PERMITIO el acceso.")
             prueba_fallida = True
             break
 
@@ -107,11 +107,11 @@ try:
     # ----------------------------------------
     print("\n=============================")
     if prueba_fallida:
-        print("❌ PRUEBA FALLIDA")
+        print(" PRUEBA FALLIDA")
     else:
-        print("🎉 PRUEBA EXITOSA")
+        print(" PRUEBA EXITOSA")
     print("=============================")
 
 finally:
-    print("Cerrando navegador…")
+    print("Cerrando navegador...")
     driver.quit()
