@@ -1,7 +1,13 @@
+import os
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+
+#  Configuración del perfil de Chrome para mantener sesiones y configuraciones
+CHROME_PROFILE_DIR = os.path.abspath("./.chrome-profile-reportfia")
+CHROME_SUBPROFILE  = "ReportFIAProfile"
 
 class Base:
     # Clase base para los Page Objects.
@@ -24,6 +30,8 @@ class Base:
     def get_driver(self):
         chrome_options = Options()
         chrome_options.add_argument('--start-maximized')
+        chrome_options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
+        chrome_options.add_argument(f"--profile-directory={CHROME_SUBPROFILE}")
         driver = webdriver.Chrome(options=chrome_options)
         # asociar driver a la instancia para que otros métodos puedan usarlo
         self.driver = driver
