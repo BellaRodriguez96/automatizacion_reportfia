@@ -194,3 +194,4 @@ def test_fun_43_cambio_estado_debe_aparecer(driver_setup):
     except Exception as e:
         guardar_screenshot(driver)
         pytest.fail(f"Error inesperado en el test:\n{traceback.format_exc()}")
+

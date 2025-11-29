@@ -31,10 +31,10 @@ SELECTORS = {
     "username": (By.ID, "carnet"),
     "password": (By.ID, "password"),
     "submit": (By.CSS_SELECTOR, "button[type='submit']"),
-    "menu_reportes": (By.CSS_SELECTOR, "button[data-collapse-toggle='reportes-dropdown']"),
-    "mis_asignaciones": (By.XPATH, "//a[contains(., 'MIS ASIGNACIONES')]"),
-    "acciones_btn": (By.XPATH, "//button[contains(@aria-label,'acciones') or contains(., 'Acciones') or contains(., '⋮')]"),
-    "cambiar_estado_option": (By.XPATH, "//*[contains(., 'Cambiar estado')]"),
+    # "menu_reportes": (By.CSS_SELECTOR, "button[data-collapse-toggle='reportes-dropdown']"),
+    # "mis_asignaciones": (By.XPATH, "//a[contains(., 'MIS ASIGNACIONES')]"),
+    # "acciones_btn": (By.XPATH, "//button[contains(@aria-label,'acciones') or contains(., 'Acciones') or contains(., '⋮')]"),
+    # "cambiar_estado_option": (By.XPATH, "//*[contains(., 'Cambiar estado')]"),
 }
 
 # ---------------- Helpers -----------------
