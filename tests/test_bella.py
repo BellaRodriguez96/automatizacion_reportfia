@@ -1,16 +1,3 @@
-import pytest
-from helpers.object_manager import ObjectManager
-
-@pytest.fixture()
-def manager():
-    """
-    Fixture que devuelve el ObjectManager (driver + page objects reutilizables).
-    """
-    om = ObjectManager()
-    yield om
-    om.quit()
-
-# Test para login con credenciales inválidas
 def test_invalidLogin(manager):
     # Usar manager en lugar de instancias separadas
     base = manager.base
@@ -30,6 +17,6 @@ def test_invalidLogin(manager):
     base.wait_for(login_page.get_back_button(), "visible")
 
     #Ingresar credenciales de usuario
-    base.enter_text(login_page.get_user_input(), "AA11001")
+    base.enter_text(login_page.get_user_input(), "ar11001")
     base.enter_text(login_page.get_password_input(), "prueba123")
     base.clickElement(login_page.get_login_button())
