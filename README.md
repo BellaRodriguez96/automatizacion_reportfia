@@ -104,3 +104,74 @@ pytest -v
 ```
 
 Si tienes problemas de importación, asegúrate de ejecutar el comando desde la raíz del proyecto (donde está este README).
+
+
+## Integración de Allure Report
+
+Allure Report permite generar reportes visuales, dinámicos y detallados
+de los resultados de las pruebas.
+
+------------------------------------------------------------------------
+
+### 1. Instalar dependencias de Allure para Pytest
+
+``` bash
+pip install allure-pytest allure-python-commons
+```
+
+Estas librerías permiten que Pytest genere automáticamente los archivos
+necesarios para Allure.
+
+------------------------------------------------------------------------
+
+### 2. Instalar Allure CLI de forma local (encapsulada en el proyecto)
+
+``` bash
+npm install -D allure-commandline
+```
+
+Esta instalación queda contenida en el proyecto y no requiere instalar
+Allure de manera global en el sistema.
+
+------------------------------------------------------------------------
+
+### 3. Ejecutar Pytest generando los archivos `allure-results`
+
+Para que Allure pueda construir los reportes HTML, ejecuta Pytest con:
+
+``` bash
+pytest --alluredir=allure-results
+```
+
+Esto generará la carpeta `allure-results/` con todos los artefactos
+necesarios para armar el dashboard de Allure.
+
+------------------------------------------------------------------------
+
+### 4. Generar y abrir el reporte de Allure usando `npx`
+
+#### Generar el reporte HTML:
+
+``` bash
+npx allure generate allure-results --clean -o allure-report
+```
+
+#### Abrir el reporte:
+
+``` bash
+npx allure open allure-report
+```
+
+------------------------------------------------------------------------
+
+### 5. Entradas recomendadas para el `.gitignore`
+
+``` gitignore
+allure-results/
+allure-report/
+node_modules/
+__pycache__/
+.pytest_cache/
+*.pyc
+venv/
+```
