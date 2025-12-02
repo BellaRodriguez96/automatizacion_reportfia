@@ -50,12 +50,33 @@ class LoginPage(Base):
         self.open_page(url=config.LOGIN_URL)
 
     def is_on_login_page(self) -> bool:
-        return config.LOGIN_URL in self.driver.current_url
+        try:
+            return config.LOGIN_URL in self.driver.current_url
+        except InvalidSessionIdException:
+            return False
 
     def is_logged_in(self) -> bool:
-        return config.HOME_URL in self.driver.current_url
+        try:
+            return config.HOME_URL in self.driver.current_url
+        except InvalidSessionIdException:
+            return False
+
+    def _wait_until_form_ready(self, timeout: int | None = None):
+        """Se asegura de que los campos principales del login estén disponibles."""
+        locators = [
+            (By.ID, self.user_input_str),
+            (By.ID, self.password_input_str),
+            (By.XPATH, self.login_button_str),
+        ]
+        for locator in locators:
+            try:
+                self.wait_for_locator(locator, "visible", timeout=timeout)
+            except AttributeError:
+                # En algunos casos Selenium devuelve None y rompe el EC; reintenta con presencia.
+                self.wait_for_locator(locator, "presence", timeout=timeout)
 
     def login(self, username: str, password: str):
+        self._wait_until_form_ready()
         self.enter_text(self.get_user_input(), username)
         self.enter_text(self.get_password_input(), password or "")
         self.clickElement(self.get_login_button())

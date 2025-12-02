@@ -17,6 +17,6 @@ def test_invalidLogin(manager):
     base.wait_for(login_page.get_back_button(), "visible")
 
     #Ingresar credenciales de usuario
-    base.enter_text(login_page.get_user_input(), "ar11001")
+    base.enter_text(login_page.get_user_input(), "aa11001")
     base.enter_text(login_page.get_password_input(), "prueba123")
     base.clickElement(login_page.get_login_button())

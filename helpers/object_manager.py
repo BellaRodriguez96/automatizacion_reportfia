@@ -29,12 +29,14 @@ class ObjectManager:
     def start_driver(self, *, reset_profile: bool = False, use_profile: bool | None = None):
         if self.driver:
             self.quit()
+        desired_profile = use_profile if use_profile is not None else self.use_profile
         if reset_profile:
             self._base.reset_profile()
-            self._base.close_residual_chrome()
-        self.driver = self._base.get_driver(use_profile=use_profile if use_profile is not None else self.use_profile)
-        self.use_profile = use_profile if use_profile is not None else self.use_profile
-        self._base.open_page()
+        # Evita sesiones inconsistentes cuando queda un Chrome zombie usando cualquier perfil.
+        self._base.close_residual_chrome()
+        self.driver = self._base.get_driver(use_profile=desired_profile)
+        self.use_profile = desired_profile
+        self._base.open_page(url=config.HOME_URL)
         self._page_cache.clear()
         return self.driver
 

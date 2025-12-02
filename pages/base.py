@@ -74,7 +74,28 @@ class Base:
         if not driver:
             raise RuntimeError("No es posible abrir una página sin WebDriver.")
         self.driver = driver
-        driver.get(url or self.URL)
+        destino = url or self.URL
+        driver.get(destino)
+        if not self._wait_for_navigation(destino):
+            # Algunos perfiles muestran la URL sin cargar; forzamos con JS como respaldo.
+            driver.execute_script("window.location.href = arguments[0];", destino)
+            self._wait_for_navigation(destino)
+
+    def _wait_for_navigation(self, expected_url: str | None, timeout: int | None = None) -> bool:
+        limite = time.time() + (timeout or min(self.default_timeout, 10))
+        esperado = (expected_url or "").rstrip("/")
+        while time.time() < limite:
+            try:
+                current = self.driver.current_url
+                ready_state = self.driver.execute_script("return document.readyState")
+            except Exception:
+                time.sleep(0.2)
+                continue
+            if ready_state in ("interactive", "complete"):
+                if not esperado or esperado in current.rstrip("/"):
+                    return True
+            time.sleep(0.2)
+        return False
 
     def wait_for_locator(self, locator: Tuple[str, str], attribute: str = "visible", timeout: int | None = None):
         self._ensure_driver()
@@ -89,6 +110,24 @@ class Base:
         if attribute not in attribute_map:
             raise ValueError(f"Condición '{attribute}' no soportada para wait_for_locator.")
         return wait.until(attribute_map[attribute])
+
+    def wait_for_page_ready(self, timeout: int | None = None) -> bool:
+        """Bloquea hasta que el DOM esté al menos en estado interactivo."""
+        self._ensure_driver()
+        wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+
+        def _ready(_driver):
+            try:
+                state = _driver.execute_script("return document.readyState")
+                return state in ("interactive", "complete")
+            except Exception:
+                return False
+
+        try:
+            wait.until(_ready)
+            return True
+        except TimeoutException:
+            return False
 
     def wait_for_any_locator(self, locators: Sequence[Tuple[str, str]], attribute: str = "visible", timeout: int | None = None):
         last_error: TimeoutException | None = None
