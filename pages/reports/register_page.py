@@ -1,7 +1,14 @@
 import random
 import time
+from pathlib import Path
 
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    ElementNotInteractableException,
+    NoSuchElementException,
+    TimeoutException,
+    WebDriverException,
+)
 from selenium.webdriver.common.by import By
 
 from pages.base import Base
@@ -62,9 +69,10 @@ class ReportsRegisterPage(Base):
         return texto
 
     def upload_evidence(self, path):
-        self.driver.execute_script(
-            "document.querySelectorAll('.file-input-overlay').forEach(function(el){el.remove();});"
-        )
+        archivo = Path(path).expanduser().resolve()
+        if not archivo.exists():
+            raise FileNotFoundError(f"No se encontro la evidencia a adjuntar: {archivo}")
+
         posibles_locators = [
             (By.ID, "comprobantes"),
             (By.NAME, "comprobantes[]"),
@@ -72,27 +80,27 @@ class ReportsRegisterPage(Base):
             (By.CSS_SELECTOR, "input[type='file']"),
         ]
 
-        campo = None
+        last_error: Exception | None = None
         end_time = time.time() + self.default_timeout
-        while time.time() < end_time and campo is None:
-            for locator in posibles_locators:
-                elementos = self.driver.find_elements(*locator)
-                if elementos:
-                    campo = elementos[0]
-                    break
-            if campo is None:
+        while time.time() < end_time:
+            campo = self._find_first_input(posibles_locators)
+            if not campo:
                 time.sleep(0.2)
+                continue
+            try:
+                self._prepare_input_for_upload(campo)
+                campo.send_keys(str(archivo))
+                self.wait_for_page_ready(timeout=5)
+                return
+            except (ElementNotInteractableException, ElementClickInterceptedException, WebDriverException) as exc:
+                last_error = exc
+                time.sleep(0.3)
+                continue
 
-        if campo is None:
-            raise TimeoutException("No se encontro el input de archivos (comprobantes).")
-
-        self.driver.execute_script(
-            "arguments[0].classList.remove('hidden'); arguments[0].style.display='block'; arguments[0].removeAttribute('multiple');",
-            campo,
-        )
-        self.scroll_into_view(campo)
-        campo.send_keys(str(path))
-        time.sleep(0.25)
+        mensaje = "No se encontro un input de archivos interactuable."
+        if last_error:
+            mensaje = f"{mensaje} Ultimo error: {last_error}"
+        raise TimeoutException(mensaje)
 
     def submit_report(self):
         enviar = self.wait_for_locator(self._send_button, "clickable")
@@ -100,15 +108,11 @@ class ReportsRegisterPage(Base):
         confirmar = self.wait_for_locator(self._confirm_button, "clickable")
         self.safe_click(confirmar)
         try:
-            mensaje = self.wait_for_locator(self._notification, "visible").text.strip()
+            mensaje = self.wait_for_locator(self._notification, "visible", timeout=8).text.strip()
         except TimeoutException:
             mensaje = ""
         finally:
-            try:
-                cerrar = self.wait_for_locator((By.CSS_SELECTOR, "button[data-modal-hide]"), "clickable")
-                self.safe_click(cerrar)
-            except TimeoutException:
-                pass
+            self._dismiss_success_modal()
         return mensaje
 
     def get_notification(self):
@@ -116,3 +120,53 @@ class ReportsRegisterPage(Base):
             return self.wait_for_locator(self._notification, "visible").text.strip()
         except TimeoutException:
             return ""
+
+    def _dismiss_success_modal(self):
+        try:
+            botones = self.driver.find_elements(By.CSS_SELECTOR, "button[data-modal-hide]")
+        except (NoSuchElementException, TimeoutException):
+            return
+        for boton in botones:
+            try:
+                if not boton.is_displayed():
+                    continue
+            except Exception:
+                continue
+            try:
+                self.safe_click(boton)
+            except Exception:
+                try:
+                    self.driver.execute_script("arguments[0].click();", boton)
+                except Exception:
+                    continue
+            self.wait_for_page_ready(timeout=5)
+            return
+
+    def _find_first_input(self, locators):
+        hidden_candidate = None
+        for locator in locators:
+            elementos = self.driver.find_elements(*locator)
+            for elemento in elementos:
+                try:
+                    if elemento.is_displayed():
+                        return elemento
+                    hidden_candidate = hidden_candidate or elemento
+                except Exception:
+                    continue
+        return hidden_candidate
+
+    def _prepare_input_for_upload(self, element):
+        self._remove_overlays()
+        self.driver.execute_script(
+            "arguments[0].classList.remove('hidden');"
+            "arguments[0].style.display='block';"
+            "arguments[0].removeAttribute('multiple');"
+            "arguments[0].removeAttribute('disabled');",
+            element,
+        )
+        self.scroll_into_view(element)
+
+    def _remove_overlays(self):
+        self.driver.execute_script(
+            "document.querySelectorAll('.file-input-overlay, [data-overlay]').forEach(function(el){el.remove();});"
+        )

@@ -16,8 +16,8 @@ class NavigationMenu(Base):
         target = f"{base_url}/{path}"
         self.open_page(url=target)
         self._ensure_authenticated(target)
-        self.wait_for_page_ready(timeout)
-        self.wait_for_url_contains(path)
+        self.wait_for_page_ready(min(timeout, 10))
+        self.wait_for_url_contains(path, timeout=timeout)
         if verify_locator:
             try:
                 self.wait_for_locator(verify_locator, "visible", timeout=timeout)
@@ -26,14 +26,16 @@ class NavigationMenu(Base):
 
     def _ensure_authenticated(self, target_url: str):
         current = self.driver.current_url
+        stored_user = getattr(self.driver, "reportfia_user", config.DEFAULT_USER)
+        stored_password = getattr(self.driver, "reportfia_password", config.DEFAULT_PASSWORD)
         if "two-factor" in current:
             two_factor = TwoFactorPage(self.driver)
-            two_factor.complete_two_factor_flow(config.DEFAULT_USER)
+            two_factor.complete_two_factor_flow(stored_user)
             self.driver.get(target_url)
             return
         if "iniciar-sesion" in current or "login" in current:
             login_page = LoginPage(self.driver)
-            login_page.ensure_logged_in(config.DEFAULT_USER, config.DEFAULT_PASSWORD)
+            login_page.ensure_logged_in(stored_user, stored_password)
             self.driver.get(target_url)
 
     def go_to_security_users(self):
@@ -62,3 +64,22 @@ class NavigationMenu(Base):
 
     def open_report_registration(self):
         self._visit("/reportes/registrar", verify_locator=(By.ID, "descripcion"))
+
+    def go_to_reports_assignments(self):
+        self._visit(
+            "/reportes/mis-asignaciones",
+            verify_locator=(By.CSS_SELECTOR, "a[href*='/reportes/detalle/']"),
+            timeout=20,
+        )
+
+    def go_to_maintenance_funds(self):
+        self._visit("/mantenimientos/fondos", verify_locator=(By.CSS_SELECTOR, "table"), timeout=15)
+
+    def go_to_maintenance_incident_types(self):
+        self._visit("/mantenimientos/tipos-incidencias", verify_locator=(By.CSS_SELECTOR, "table"), timeout=15)
+
+    def go_to_maintenance_assets(self):
+        self._visit("/mantenimientos/bienes", verify_locator=(By.CSS_SELECTOR, "table"), timeout=15)
+
+    def go_to_bitacora(self):
+        self._visit("/bitacora", verify_locator=(By.CSS_SELECTOR, "table"), timeout=15)

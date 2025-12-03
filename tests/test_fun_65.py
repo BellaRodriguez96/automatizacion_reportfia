@@ -8,7 +8,7 @@ from pages.reports.register_page import ReportsRegisterPage
 
 def test_fun_65_registro_reporte(manager):
     login_page = manager.get(LoginPage)
-    login_page.ensure_logged_in(config.DEFAULT_USER, config.DEFAULT_PASSWORD)
+    login_page.ensure_logged_in(config.MAINTENANCE_USER, config.MAINTENANCE_PASSWORD)
 
     nav = manager.get(NavigationMenu)
     nav.go_to_reports_list()
@@ -34,3 +34,4 @@ def test_fun_65_registro_reporte(manager):
     list_page.apply_filters()
 
     assert "/reportes/listado-general" in manager.driver.current_url
+

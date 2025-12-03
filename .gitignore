@@ -216,6 +216,6 @@ __marimo__/
 *.sublime-workspace
 allure-results/
 allure-report/
-node_modules/
+node_modules
 package-lock.json
 package.json

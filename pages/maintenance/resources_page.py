@@ -70,3 +70,10 @@ class MaintenanceResourcesPage(Base):
             return True
         except TimeoutException:
             return False
+
+    def table_is_visible(self) -> bool:
+        try:
+            self.wait_for_locator((By.CSS_SELECTOR, "table"), "visible")
+            return True
+        except TimeoutException:
+            return False

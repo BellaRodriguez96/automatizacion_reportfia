@@ -7,7 +7,7 @@ from pages.security.users_page import SecurityUsersPage
 
 def test_fun_06_registro_estudiante(manager):
     login_page = manager.get(LoginPage)
-    login_page.ensure_logged_in(config.DEFAULT_USER, config.DEFAULT_PASSWORD)
+    login_page.ensure_logged_in(config.MAINTENANCE_USER, config.MAINTENANCE_PASSWORD)
 
     nav = manager.get(NavigationMenu)
     nav.go_to_security_users()

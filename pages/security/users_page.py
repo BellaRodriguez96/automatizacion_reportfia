@@ -1,5 +1,3 @@
-import time
-
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -43,8 +41,12 @@ class SecurityUsersPage(Base):
         self.type_into(self._field_nombre, data.first_name)
         self.type_into(self._field_apellido, data.last_name)
         fecha_input = self.wait_for_locator(self._field_fecha, "clickable")
-        self.driver.execute_script("arguments[0].value = arguments[1];", fecha_input, data.birthdate)
-        time.sleep(0.25)
+        self.driver.execute_script(
+            "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+            fecha_input,
+            data.birthdate,
+        )
+        self.wait_for_page_ready(timeout=3)
         self.type_into(self._field_telefono, data.phone)
         self.type_into(self._field_email, data.email)
         self.type_into(self._field_carnet, data.carnet)
@@ -82,13 +84,16 @@ class SecurityUsersPage(Base):
         campo = self.wait_for_locator(self._filter_email, "visible")
         campo.clear()
         campo.send_keys(email)
-        time.sleep(0.25)
+        self.driver.execute_script(
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true})); arguments[0].dispatchEvent(new Event('change', {bubbles: true}));",
+            campo,
+        )
 
     def apply_filters(self):
-        btn = self.wait_for_locator(self._filters_button, "clickable")
+        btn = self.wait_for_locator(self._filters_button, "clickable", timeout=5)
         self.scroll_into_view(btn)
         self.safe_click(btn)
-        self.pause_for_visual(2)
+        self.wait_for_page_ready(timeout=6)
 
     def table_contains_email(self, email: str) -> bool:
         locator = (

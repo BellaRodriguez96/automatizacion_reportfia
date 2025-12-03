@@ -36,7 +36,6 @@ class ObjectManager:
         self._base.close_residual_chrome()
         self.driver = self._base.get_driver(use_profile=desired_profile)
         self.use_profile = desired_profile
-        self._base.open_page(url=config.HOME_URL)
         self._page_cache.clear()
         return self.driver
 
@@ -44,9 +43,12 @@ class ObjectManager:
         return self.start_driver(reset_profile=reset_profile, use_profile=use_profile)
 
     def get(self, page_cls: Type[T]) -> T:
+        self._ensure_driver_active()
         if page_cls not in self._page_cache:
             self._page_cache[page_cls] = page_cls(self.driver)
-        return self._page_cache[page_cls]
+        page = self._page_cache[page_cls]
+        page.driver = self.driver
+        return page  # type: ignore[return-value]
 
     @property
     def base(self) -> Base:
@@ -64,3 +66,11 @@ class ObjectManager:
         if self.driver:
             self._base.quit_driver(self.driver)
             self.driver = None
+
+    def _driver_alive(self) -> bool:
+        return bool(self.driver and self._base.is_driver_alive())
+
+    def _ensure_driver_active(self):
+        if self._driver_alive():
+            return
+        self.restart(reset_profile=False, use_profile=self.use_profile)
