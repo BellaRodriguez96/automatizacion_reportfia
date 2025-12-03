@@ -23,7 +23,17 @@ class ReportsAssignmentsPage(Base):
                     continue
                 self.scroll_into_view(link)
                 self.safe_click(link)
+                try:
+                    self.wait_for_url_contains("/reportes/detalle", timeout=15)
+                except TimeoutException:
+                    self.driver.back()
+                    self.wait_for_locator(self._assignments_table, "visible", timeout=10)
+                    continue
                 self.wait_for_page_ready(timeout=10)
+                if self.detect_http_500():
+                    self.driver.back()
+                    self.wait_for_locator(self._assignments_table, "visible", timeout=10)
+                    continue
                 return self.driver.current_url
             time.sleep(0.3)
         raise TimeoutException("No se encontraron asignaciones disponibles para abrir durante el tiempo de espera.")

@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 from helpers.object_manager import ObjectManager
@@ -151,6 +153,12 @@ def block_persistence_guard(request, session_manager):
     if controller.is_last(block, request.node.nodeid):
         login_page.logout_and_clear()
         controller.mark_finished(block)
+
+
+@pytest.fixture(autouse=True)
+def pause_after_test():
+    yield
+    time.sleep(2)
 
 
 def pytest_collection_modifyitems(config, items):

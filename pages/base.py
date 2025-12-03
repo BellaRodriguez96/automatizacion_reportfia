@@ -16,6 +16,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from helpers import config
 
 POST_ACTION_DELAY = float(os.getenv("REPORTFIA_ACTION_DELAY", "0.05"))
+DATA_ENTRY_DELAY = float(os.getenv("REPORTFIA_DATA_ENTRY_DELAY", "0.2"))
 POST_ACTION_SYNC = os.getenv("REPORTFIA_POST_ACTION_SYNC", "0").lower() in ("1", "true", "yes")
 
 
@@ -203,6 +204,8 @@ class Base:
     def enter_text(self, element, text: str):
         element.clear()
         element.send_keys(text)
+        if DATA_ENTRY_DELAY > 0:
+            time.sleep(DATA_ENTRY_DELAY)
         self._post_action_wait()
 
     def type_into(self, locator: Tuple[str, str], text: str, *, clear: bool = True, wait_attr: str = "visible"):
@@ -210,6 +213,8 @@ class Base:
         if clear:
             element.clear()
         element.send_keys(text)
+        if DATA_ENTRY_DELAY > 0:
+            time.sleep(DATA_ENTRY_DELAY)
         self._post_action_wait()
         return element
 
@@ -257,7 +262,10 @@ class Base:
             "ha ocurrido un error inesperado",
             "por favor vuelve a intentarlo mas tarde",
         )
-        return any(p in html for p in patterns)
+        found = any(p in html for p in patterns)
+        if found:
+            time.sleep(3)
+        return found
 
     def clear_storage(self):
         if not self.driver:

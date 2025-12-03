@@ -219,3 +219,4 @@ allure-report/
 node_modules
 package-lock.json
 package.json
+.allure

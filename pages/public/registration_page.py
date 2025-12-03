@@ -39,6 +39,17 @@ class RegistrationPage(Base):
         self.click_locator(self._submit_button)
 
     def has_validation_error(self) -> bool:
+        invalid_count = self.driver.execute_script(
+            "return document.querySelectorAll('input:invalid, select:invalid, textarea:invalid').length;"
+        )
+        if invalid_count and int(invalid_count) > 0:
+            return True
+        for notif in self.driver.find_elements(By.CSS_SELECTOR, ".notyf__message, .text-red-500, .text-red-600"):
+            try:
+                if notif.is_displayed() and notif.text.strip():
+                    return True
+            except Exception:
+                continue
         body_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
         keywords = ("por favor", "debes", "obligatorio", "completa", "ingresa", "campo")
         return any(k in body_text for k in keywords)
