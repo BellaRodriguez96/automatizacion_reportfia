@@ -80,6 +80,7 @@ class Base:
             # Algunos perfiles muestran la URL sin cargar; forzamos con JS como respaldo.
             driver.execute_script("window.location.href = arguments[0];", destino)
             self._wait_for_navigation(destino)
+        self._post_action_wait()
 
     def _wait_for_navigation(self, expected_url: str | None, timeout: int | None = None) -> bool:
         limite = time.time() + (timeout or min(self.default_timeout, 10))
@@ -159,19 +160,20 @@ class Base:
     def enter_text(self, element, text: str):
         element.clear()
         element.send_keys(text)
-        time.sleep(0.25)
+        self._post_action_wait()
 
     def type_into(self, locator: Tuple[str, str], text: str, *, clear: bool = True, wait_attr: str = "visible"):
         element = self.wait_for_locator(locator, wait_attr)
         if clear:
             element.clear()
         element.send_keys(text)
-        time.sleep(0.25)
+        self._post_action_wait()
         return element
 
     def clickElement(self, element):
         elem = self.wait_for(element, "clickable")
         elem.click()
+        self._post_action_wait()
 
     def safe_click(self, element):
         self._ensure_driver()
@@ -179,6 +181,7 @@ class Base:
             element.click()
         except Exception:
             self.driver.execute_script("arguments[0].click();", element)
+        self._post_action_wait()
 
     def click_locator(self, locator: Tuple[str, str]):
         element = self.wait_for_locator(locator, "clickable")
@@ -212,3 +215,11 @@ class Base:
             "por favor vuelve a intentarlo mas tarde",
         )
         return any(p in html for p in patterns)
+
+    def _post_action_wait(self, delay: float = 1.0):
+        """Da margen para que la UI termine de renderizar tras cada acción."""
+        try:
+            self.wait_for_page_ready(timeout=5)
+        except Exception:
+            pass
+        time.sleep(delay)
