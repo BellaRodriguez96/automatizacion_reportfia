@@ -54,6 +54,12 @@ class NavigationMenu(Base):
             verify_locator=(By.CSS_SELECTOR, "button[data-modal-toggle='static-modal']"),
             timeout=15,
         )
+    def go_to_maintenance_units(self):
+        self._visit(
+            "/mantenimientos/unidades-medida",
+            verify_locator=(By.CSS_SELECTOR, "button[data-modal-target='static-modal']"),
+            timeout=15,
+        )
 
     def go_to_reports_list(self):
         self._visit(

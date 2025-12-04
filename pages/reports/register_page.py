@@ -68,6 +68,37 @@ class ReportsRegisterPage(Base):
         time.sleep(0.25)
         return texto
 
+    def select_incident_by_text(self, texto: str) -> str:
+        campo = self.wait_for_locator(self._incident_input, "clickable")
+        campo.click()
+        self.driver.execute_script("arguments[0].value='';", campo)
+        campo.send_keys(texto)
+        opcion = self.wait_for_locator(
+            (
+                By.XPATH,
+                f"//ul[contains(@class,'absolute')]//li[contains(normalize-space(), '{texto}')]",
+            ),
+            "clickable",
+        )
+        self.safe_click(opcion)
+        time.sleep(0.25)
+        return texto
+
+    def select_location_by_text(self, texto: str) -> str:
+        campo = self.wait_for_locator(self._location_input, "clickable")
+        self.driver.execute_script("arguments[0].value='';", campo)
+        campo.send_keys(texto)
+        opcion = self.wait_for_locator(
+            (
+                By.XPATH,
+                f"//div[contains(@class,'shadow-lg')]//li[.//span[normalize-space()='{texto}']]",
+            ),
+            "clickable",
+        )
+        self.safe_click(opcion)
+        time.sleep(0.25)
+        return texto
+
     def upload_evidence(self, path):
         archivo = Path(path).expanduser().resolve()
         if not archivo.exists():

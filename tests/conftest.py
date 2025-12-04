@@ -18,6 +18,11 @@ AA_BLOCK_TESTS = [
     "test_fun_65.py",
     "test_fun_69.py",
     "test_fun_75.py",
+    "test_fun_15.py",
+    "test_fun_39.py",
+    "test_fun_46.py",
+    "test_fun_52.py",
+    "test_fun_54.py",
 ]
 EE_BLOCK_TESTS = ["test_fun_43.py"]
 RR_BLOCK_TESTS = ["test_fun_45.py", "test_fun_48.py"]
@@ -31,6 +36,12 @@ MIXED_BLOCK_TESTS = [
 ]
 
 BLOCK_DEFINITIONS = [
+    {
+        "name": "profile_block",
+        "tests": ["test_fun_08.py"],
+        "reset_before_first": True,
+        "clear_before_each": True,
+    },
     {
         "name": "aa_persist_block",
         "tests": AA_BLOCK_TESTS,
@@ -178,6 +189,7 @@ def pytest_collection_modifyitems(config, items):
         order.extend(block["tests"])
     order.extend(
         [
+            "test_fun_71.py",
             "test_seg_14.py",
             "test_seg_19.py",
         ]

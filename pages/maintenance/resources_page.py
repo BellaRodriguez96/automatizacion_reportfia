@@ -1,5 +1,8 @@
 import time
 
+import re
+import time
+
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
@@ -18,6 +21,12 @@ class MaintenanceResourcesPage(Base):
     _notification = (By.CSS_SELECTOR, "div.notyf__message")
     _filter_name = (By.ID, "nombre-filter")
     _filters_button = (By.CSS_SELECTOR, "button[data-tooltip-target='tooltip-aplicar-filtros']")
+    _import_button = (By.XPATH, "//button[contains(normalize-space(),'Importar datos')]")
+    _import_modal = (By.ID, "static-modal-excel")
+    _import_file = (By.ID, "excel_file")
+    _import_save = (By.CSS_SELECTOR, "button[type='submit'][form='import-excel-recursos']")
+    _paginator = (By.XPATH, "//p[contains(normalize-space(),'de un total de')]")
+    _table_rows = (By.CSS_SELECTOR, "table tbody tr")
 
     def open_add_modal(self):
         locators = [
@@ -77,3 +86,32 @@ class MaintenanceResourcesPage(Base):
             return True
         except TimeoutException:
             return False
+
+    def open_import_modal(self):
+        button = self.wait_for_locator(self._import_button, "clickable")
+        self.scroll_into_view(button)
+        self.safe_click(button)
+        self.wait_for_locator(self._import_modal, "visible", timeout=15)
+
+    def upload_import_file(self, path: str):
+        campo = self.wait_for_locator(self._import_file, "presence", timeout=10)
+        campo.send_keys(path)
+
+    def confirm_import(self):
+        boton = self.wait_for_locator(self._import_save, "clickable", timeout=10)
+        self.safe_click(boton)
+        self.wait_for_page_ready(timeout=15)
+
+    def refresh_table(self):
+        self.driver.refresh()
+        self.wait_for_page_ready(timeout=10)
+
+    def get_total_results(self) -> int:
+        texto = self.wait_for_locator(self._paginator, "visible", timeout=10).text
+        match = re.search(r"de un total de\s+(\d+)", texto)
+        if not match:
+            raise AssertionError(f"No fue posible leer el total de resultados en: {texto}")
+        return int(match.group(1))
+
+    def get_visible_rows(self) -> int:
+        return len(self.driver.find_elements(*self._table_rows))
