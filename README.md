@@ -154,6 +154,8 @@ necesarios para armar el dashboard de Allure.
 
 ``` bash
 npx allure generate allure-results --clean -o allure-report
+o
+npx allure generate -o allure-report allure-results
 ```
 
 #### Abrir el reporte:
