@@ -89,3 +89,10 @@ class NavigationMenu(Base):
 
     def go_to_bitacora(self):
         self._visit("/bitacora", verify_locator=(By.CSS_SELECTOR, "table"), timeout=15)
+
+    def go_to_hr_entities(self):
+        self._visit(
+            "/recursos-humanos/entidades",
+            verify_locator=(By.CSS_SELECTOR, "table"),
+            timeout=15,
+        )

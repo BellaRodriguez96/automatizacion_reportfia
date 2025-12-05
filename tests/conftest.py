@@ -9,6 +9,7 @@ from pages.login_page import LoginPage
 AA_BLOCK_TESTS = [
     "test_fun_01.py",
     "test_fun_06.py",
+    "test_fun_19.py",
     "test_fun_36.py",
     "test_fun_38.py",
     "test_fun_49.py",
@@ -45,7 +46,7 @@ BLOCK_DEFINITIONS = [
     {
         "name": "aa_persist_block",
         "tests": AA_BLOCK_TESTS,
-        "reset_before_first": True,
+        "reset_before_first": False,
         "clear_before_each": False,
     },
     {
