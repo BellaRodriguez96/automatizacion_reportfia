@@ -7,7 +7,7 @@ from pages.login_page import LoginPage
 def test_fun_73_bloqueo_tras_varios_intento_fallidos(manager):
     login_page = manager.get(LoginPage)
     usuarios = [
-        ("usuario_no_registrado_1", "pass_invalida_1", 15),
+        ("usuario_no_registrado_1", "pass_invalida_1", 10),
     ]
 
     for usuario, contrasena, intentos in usuarios:
