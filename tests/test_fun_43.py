@@ -19,7 +19,11 @@ def test_fun_43_mis_asignaciones(manager):
     assignments = manager.get(ReportsAssignmentsPage)
     try:
         detail_url = assignments.open_first_assignment()
+    except RuntimeError as exc:
+        pytest.fail(str(exc))
     except TimeoutException:
+        if manager.base.detect_http_500():
+            pytest.fail("El módulo de asignaciones mostró un error 500 y no se completó el flujo.")
         pytest.skip("No hay asignaciones disponibles para validar el detalle.")
 
     assert "/reportes/detalle" in detail_url, "El detalle de la asignación no se abrió correctamente."

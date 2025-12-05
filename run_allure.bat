@@ -1,6 +1,6 @@
 @echo off
 echo Eliminando reporte anterior...
-rmdir /s /q allure-report
+@REM rmdir /s /q allure-report
 
 echo Ejecutando pruebas...
 pytest --alluredir=allure-results

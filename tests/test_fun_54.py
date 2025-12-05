@@ -21,4 +21,7 @@ def test_fun_54_crear_unidad_medida(manager):
     unidades.fill_form(nombre, activo=True)
     unidades.save()
 
+    unidades.filter_by_name(nombre)
+    unidades.apply_filters()
+
     assert unidades.table_contains_unit(nombre), "La unidad creada no aparece en la tabla."

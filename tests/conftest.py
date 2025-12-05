@@ -24,6 +24,7 @@ AA_BLOCK_TESTS = [
     "test_fun_15.py",
     "test_fun_39.py",
     "test_fun_46.py",
+    "test_fun_51.py",
     "test_fun_52.py",
     "test_fun_54.py",
 ]

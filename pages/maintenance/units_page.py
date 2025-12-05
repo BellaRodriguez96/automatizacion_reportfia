@@ -11,6 +11,8 @@ class MaintenanceUnitsPage(Base):
     _state_select = (By.ID, "activo")
     _save_button = (By.CSS_SELECTOR, "button[form='unidad-form'][type='submit']")
     _table = (By.CSS_SELECTOR, "table")
+    _filter_name = (By.ID, "nombre-filter")
+    _filters_button = (By.CSS_SELECTOR, "button[data-tooltip-target='tooltip-aplicar-filtros']")
 
     def open_add_modal(self):
         button = self.wait_for_locator(self._add_button, "clickable")
@@ -27,6 +29,19 @@ class MaintenanceUnitsPage(Base):
         boton = self.wait_for_locator(self._save_button, "clickable")
         self.safe_click(boton)
         self.wait_for_page_ready(timeout=10)
+
+    def filter_by_name(self, name: str):
+        campo = self.wait_for_locator(self._filter_name, "visible")
+        campo.clear()
+        campo.send_keys(name)
+        self.pause_for_visual(0.2)
+
+    def apply_filters(self):
+        boton = self.wait_for_locator(self._filters_button, "clickable")
+        self.scroll_into_view(boton)
+        self.safe_click(boton)
+        self.wait_for_page_ready(timeout=10)
+        self.pause_for_visual(0.5)
 
     def table_contains_unit(self, nombre: str) -> bool:
         locator = (

@@ -31,9 +31,12 @@ class ReportsAssignmentsPage(Base):
                     continue
                 self.wait_for_page_ready(timeout=10)
                 if self.detect_http_500():
-                    self.driver.back()
-                    self.wait_for_locator(self._assignments_table, "visible", timeout=10)
-                    continue
+                    try:
+                        self.driver.back()
+                        self.wait_for_locator(self._assignments_table, "visible", timeout=10)
+                    except Exception:
+                        pass
+                    raise RuntimeError("El detalle del reporte mostró un error 500.")
                 return self.driver.current_url
             time.sleep(0.3)
         raise TimeoutException("No se encontraron asignaciones disponibles para abrir durante el tiempo de espera.")

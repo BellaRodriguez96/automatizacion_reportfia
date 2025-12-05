@@ -1,13 +1,12 @@
-import time
-
 import re
 import time
-
+import requests
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import Select
 
 from pages.base import Base
+from helpers import config
 
 
 class MaintenanceResourcesPage(Base):
@@ -27,6 +26,14 @@ class MaintenanceResourcesPage(Base):
     _import_save = (By.CSS_SELECTOR, "button[type='submit'][form='import-excel-recursos']")
     _paginator = (By.XPATH, "//p[contains(normalize-space(),'de un total de')]")
     _table_rows = (By.CSS_SELECTOR, "table tbody tr")
+    _download_template_link = (
+        By.XPATH,
+        "//a[contains(@href, '.xls') and "
+        "(contains(translate(normalize-space(.), 'ÁÉÍÓÚáéíóú', 'AEIOUaeiou'), 'DESCARGAR') "
+        "or contains(translate(normalize-space(.), 'ÁÉÍÓÚáéíóú', 'AEIOUaeiou'), 'FORMATO') "
+        "or contains(translate(normalize-space(.), 'ÁÉÍÓÚáéíóú', 'AEIOUaeiou'), 'PLANTILLA'))]",
+    )
+    _download_template_button = (By.ID, "descargarRecursosBtn")
 
     def open_add_modal(self):
         locators = [
@@ -115,3 +122,68 @@ class MaintenanceResourcesPage(Base):
 
     def get_visible_rows(self) -> int:
         return len(self.driver.find_elements(*self._table_rows))
+
+    def download_template(self) -> tuple[str, bytes]:
+        """Descarga la plantilla oficial para importar datos de recursos.
+
+        La vista ofrece un enlace que en algunos ambientes puede tardar en ser visible
+        u ocultarse tras menús. Para evitar bloqueos por sincronización se intenta leer
+        el href cuando esté disponible y, si no, se usa el endpoint conocido.
+        """
+        self.wait_for_page_ready(timeout=10)
+        endpoint = f"{config.BASE_URL}/descargar/archivo/recursos"
+        clicked_href = ""
+        button_clicked = False
+        try:
+            button = self.wait_for_locator(self._download_template_button, "clickable", timeout=5)
+            self.scroll_into_view(button)
+            try:
+                self.safe_click(button)
+            except TimeoutException:
+                self.driver.execute_script("arguments[0].click();", button)
+            button_clicked = True
+            self.pause_for_visual(0.5)
+        except TimeoutException:
+            pass
+        try:
+            link = self.wait_for_locator(self._download_template_link, "presence", timeout=5)
+            href = link.get_attribute("href") or ""
+            self.scroll_into_view(link)
+            try:
+                clickable = self.wait_for_locator(self._download_template_link, "clickable", timeout=2)
+                self.safe_click(clickable)
+            except TimeoutException:
+                # El enlace no se pudo clickear directamente, lo intentamos via JS.
+                self.driver.execute_script("arguments[0].click();", link)
+            clicked_href = href
+            if clicked_href:
+                if clicked_href.startswith("/"):
+                    endpoint = f"{config.BASE_URL}{clicked_href}"
+                else:
+                    endpoint = clicked_href
+        except TimeoutException:
+            # No se encontró el enlace; continuamos con el endpoint por defecto.
+            pass
+
+        session = requests.Session()
+        user_agent = self.driver.execute_script("return navigator.userAgent") or "Mozilla/5.0"
+        headers = {
+            "User-Agent": user_agent,
+            "Referer": self.driver.current_url,
+            "Accept": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/octet-stream;q=0.9,*/*;q=0.8",
+        }
+        for cookie in self.driver.get_cookies():
+            session.cookies.set(cookie["name"], cookie["value"])
+
+        response = session.get(endpoint, headers=headers, timeout=60)
+        response.raise_for_status()
+
+        file_name = "formato_recursos.xlsx"
+        disposition = response.headers.get("Content-Disposition") or ""
+        if "filename=" in disposition:
+            file_name = disposition.split("filename=")[-1].strip(' \";')
+
+        if not response.content:
+            raise AssertionError("El archivo descargado está vacío.")
+
+        return file_name, response.content
