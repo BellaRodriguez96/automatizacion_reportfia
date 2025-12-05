@@ -20,6 +20,7 @@ class ReportsListPage(Base):
     _register_link = (By.XPATH, "//a[contains(@href,'/reportes/registrar')]")
     _results_table = (By.CSS_SELECTOR, "table")
     _results_rows = (By.CSS_SELECTOR, "table tbody tr")
+    _detail_links = (By.CSS_SELECTOR, "a[href*='/reportes/detalle/']")
 
     def open_date_dropdown(self):
         self.click_locator(self._date_dropdown_button)
@@ -60,6 +61,20 @@ class ReportsListPage(Base):
 
     def open_register_form(self):
         self.click_locator(self._register_link)
+
+    def wait_until_ready(self):
+        self.wait_for_locator(self._results_table, "visible", timeout=15)
+        try:
+            self.wait_for_locator(self._results_rows, "presence", timeout=5)
+        except TimeoutException:
+            pass
+
+    def open_first_detail(self) -> str:
+        link = self.wait_for_locator(self._detail_links, "clickable", timeout=10)
+        href = link.get_attribute("href") or ""
+        self.scroll_into_view(link)
+        self.safe_click(link)
+        return href
 
     def _wait_for_results(self, timeout: int = 5):
         try:
