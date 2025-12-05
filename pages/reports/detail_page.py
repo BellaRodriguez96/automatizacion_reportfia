@@ -75,3 +75,10 @@ class ReportDetailPage(Base):
         except Exception:
             return False
         return keyword.lower() in html
+
+    def page_contains(self, text: str) -> bool:
+        try:
+            html = (self.driver.page_source or "").lower()
+        except Exception:
+            return False
+        return text.lower() in html

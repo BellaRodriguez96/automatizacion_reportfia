@@ -10,6 +10,8 @@ AA_BLOCK_TESTS = [
     "test_fun_01.py",
     "test_fun_06.py",
     "test_fun_19.py",
+    "test_fun_40.py",
+    "test_fun_41.py",
     "test_fun_36.py",
     "test_fun_38.py",
     "test_fun_49.py",
@@ -21,7 +23,6 @@ AA_BLOCK_TESTS = [
     "test_fun_75.py",
     "test_fun_15.py",
     "test_fun_39.py",
-    "test_fun_40.py",
     "test_fun_46.py",
     "test_fun_52.py",
     "test_fun_54.py",
@@ -192,6 +193,7 @@ def pytest_collection_modifyitems(config, items):
     order.extend(
         [
             "test_fun_71.py",
+            "test_fun_73.py",
             "test_seg_14.py",
             "test_seg_19.py",
         ]
