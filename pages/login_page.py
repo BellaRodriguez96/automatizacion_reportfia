@@ -13,6 +13,11 @@ class LoginPage(Base):
     user_input_str = "carnet"
     password_input_str = "password"
     login_button_str = "//*[@type = \"submit\"]"
+    _remember_locators = [
+        (By.ID, "remember"),
+        (By.NAME, "remember"),
+        (By.CSS_SELECTOR, "input[type='checkbox'][name*='remember']"),
+    ]
     notification_selector = (By.CSS_SELECTOR, "div.notyf__message")
 
     PERSISTENT_USERS = {config.DEFAULT_USER.lower(), config.MAINTENANCE_USER.lower()}
@@ -128,6 +133,18 @@ class LoginPage(Base):
 
         mensaje = self.get_error_notification()
         raise RuntimeError(f"No se pudo iniciar sesion: {mensaje or 'motivo desconocido'}")
+
+    def set_remember_me(self, enabled: bool = True):
+        checkbox = self.wait_for_any_locator(self._remember_locators, "clickable", timeout=10)
+        if checkbox.is_selected() != enabled:
+            self.scroll_into_view(checkbox)
+            self.safe_click(checkbox)
+
+    def get_remember_cookie(self):
+        for cookie in self.driver.get_cookies():
+            if "remember" in cookie.get("name", "").lower():
+                return cookie
+        return None
 
     # ------------------------------------------------------------------ #
     #   UTILIDADES PRIVADAS

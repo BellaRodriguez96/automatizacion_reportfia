@@ -37,6 +37,7 @@ MIXED_BLOCK_TESTS = [
     "test_fun_79.py",
     "test_fun_70.py",
     "test_fun_76.py",
+    "test_seg_12.py",
     "test_seg_04.py",
     "test_seg_16.py",
     "test_seg_17.py",
