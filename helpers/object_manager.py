@@ -32,8 +32,8 @@ class ObjectManager:
         desired_profile = use_profile if use_profile is not None else self.use_profile
         if reset_profile:
             self._base.reset_profile()
-        # Evita sesiones inconsistentes cuando queda un Chrome zombie usando cualquier perfil.
-        self._base.close_residual_chrome()
+        # Evita sesiones inconsistentes cuando queda un navegador zombie usando cualquier perfil.
+        self._base.close_residual_browsers()
         self.driver = self._base.get_driver(use_profile=desired_profile)
         self.use_profile = desired_profile
         self._page_cache.clear()

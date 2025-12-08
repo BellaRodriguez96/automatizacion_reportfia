@@ -1,7 +1,9 @@
+import os
 import time
 
 import pytest
 
+from helpers import config
 from helpers.object_manager import ObjectManager
 from pages.base import Base
 from pages.login_page import LoginPage
@@ -77,6 +79,16 @@ BLOCK_DEFINITIONS = [
 ]
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--browser",
+        action="store",
+        choices=list(config.SUPPORTED_BROWSERS),
+        default=config.get_browser_choice(),
+        help="Selecciona el navegador para la ejecucion (chrome/edge).",
+    )
+
+
 class BlockController:
     def __init__(self, blocks):
         self.blocks = blocks
@@ -103,6 +115,9 @@ class BlockController:
 
 
 def pytest_configure(config):
+    selected_browser = config.getoption("browser")
+    if selected_browser:
+        os.environ["REPORTFIA_BROWSER"] = selected_browser
     config._block_controller = BlockController(BLOCK_DEFINITIONS)
 
 
@@ -215,5 +230,5 @@ def pytest_collection_modifyitems(config, items):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    """Clean Chrome persistence at the end of the suite."""
+    """Clean browser persistence at the end of the suite."""
     Base().reset_profile()

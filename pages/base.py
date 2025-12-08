@@ -7,11 +7,14 @@ from typing import Callable, Iterable, Sequence, Tuple
 
 from selenium import webdriver
 from selenium.common.exceptions import InvalidSessionIdException, NoSuchWindowException, TimeoutException, WebDriverException
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
 from helpers import config
 
@@ -34,18 +37,55 @@ class Base:
     #   WEB DRIVER
     # ------------------------------------------------------------------ #
     def get_driver(self, *, use_profile: bool = True):
-        chrome_options = Options()
+        browser = config.get_browser_choice()
+        if browser == "edge":
+            driver = self._build_edge_driver(use_profile)
+        else:
+            driver = self._build_chrome_driver(use_profile)
+        self.driver = driver
+        self._wait = WebDriverWait(self.driver, self.default_timeout)
+        return driver
+
+    def _build_chrome_driver(self, use_profile: bool):
+        chrome_options = ChromeOptions()
         chrome_options.add_argument("--start-maximized")
         chrome_options.page_load_strategy = "normal"
         if use_profile:
             chrome_options.add_argument(f"--user-data-dir={config.CHROME_PROFILE_DIR}")
             chrome_options.add_argument(f"--profile-directory={config.CHROME_SUBPROFILE}")
+        driver_override = config.get_driver_override("chrome")
+        if driver_override:
+            service = ChromeService(executable_path=str(driver_override))
+        else:
+            try:
+                service = ChromeService(ChromeDriverManager().install())
+            except Exception as exc:
+                raise RuntimeError(
+                    "No se pudo obtener chromedriver. Define REPORTFIA_CHROME_DRIVER "
+                    "o coloca el binario en drivers/chromedriver.exe."
+                ) from exc
+        return webdriver.Chrome(service=service, options=chrome_options)
 
-        service = ChromeService(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        self.driver = driver
-        self._wait = WebDriverWait(self.driver, self.default_timeout)
-        return driver
+    def _build_edge_driver(self, use_profile: bool):
+        edge_options = EdgeOptions()
+        edge_options.use_chromium = True
+        edge_options.add_argument("--start-maximized")
+        edge_options.page_load_strategy = "normal"
+        if use_profile:
+            edge_options.add_argument(f"--user-data-dir={config.CHROME_PROFILE_DIR}")
+            edge_options.add_argument(f"--profile-directory={config.CHROME_SUBPROFILE}")
+        driver_override = config.get_driver_override("edge")
+        if driver_override:
+            service = EdgeService(executable_path=str(driver_override))
+        else:
+            try:
+                service = EdgeService(EdgeChromiumDriverManager().install())
+            except Exception as exc:
+                raise RuntimeError(
+                    "No se pudo obtener msedgedriver. Define REPORTFIA_EDGE_DRIVER "
+                    "o coloca el binario en drivers/msedgedriver.exe."
+                ) from exc
+        return webdriver.Edge(service=service, options=edge_options)
 
     def quit_driver(self, driver):
         try:
@@ -58,10 +98,11 @@ class Base:
     def reset_profile(self):
         shutil.rmtree(config.CHROME_PROFILE_DIR, ignore_errors=True)
 
-    def close_residual_chrome(self):
+    def close_residual_browsers(self):
         if not sys.platform.startswith("win"):
             return
-        for proc in ("chromedriver.exe", "chrome.exe"):
+        lingering = ("chromedriver.exe", "chrome.exe", "msedgedriver.exe", "msedge.exe")
+        for proc in lingering:
             try:
                 subprocess.run(
                     ["taskkill", "/F", "/IM", proc],
