@@ -96,3 +96,10 @@ class NavigationMenu(Base):
             verify_locator=(By.CSS_SELECTOR, "table"),
             timeout=15,
         )
+
+    def go_to_hr_employees(self):
+        self._visit(
+            "/recursos-humanos/empleados",
+            verify_locator=(By.CSS_SELECTOR, "table"),
+            timeout=20,
+        )

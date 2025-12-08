@@ -173,18 +173,26 @@ class Base:
     def wait_for_locator(self, locator: Tuple[str, str], attribute: str = "visible", timeout: int | None = None):
         self._ensure_driver()
         wait = WebDriverWait(self.driver, timeout or self.default_timeout)
-        attribute_map = {
-            "clickable": EC.element_to_be_clickable(locator),
-            "visible": EC.visibility_of_element_located(locator),
-            "presence": EC.presence_of_element_located(locator),
-            "all_visible": EC.visibility_of_all_elements_located(locator),
-            "invisible": EC.invisibility_of_element_located(locator),
-        }
-        if attribute not in attribute_map:
-            raise ValueError(f"Condicion '{attribute}' no soportada para wait_for_locator.")
-        return wait.until(attribute_map[attribute])
+        condition = self._build_wait_condition(locator, attribute)
+        return wait.until(condition)
 
-    def wait_for_any_locator(self, locators: Sequence[Tuple[str, str]], attribute: str = "visible", timeout: int | None = None):
+    def wait_for_any_locator(self, locators: Sequence[Tuple[str, str]], attribute: str = "visible", timeout: int | None = None, *, shared_timeout: bool = False):
+        self._ensure_driver()
+        if not locators:
+            raise ValueError("Se requiere al menos un locator para wait_for_any_locator.")
+        if shared_timeout:
+            wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+            conditions = [self._build_wait_condition(locator, attribute) for locator in locators]
+
+            def _match(driver):
+                for condition in conditions:
+                    result = condition(driver)
+                    if result:
+                        return result
+                return False
+
+            return wait.until(_match)
+
         last_error: TimeoutException | None = None
         for locator in locators:
             try:
@@ -193,6 +201,18 @@ class Base:
                 last_error = exc
                 continue
         raise last_error or TimeoutException("No se encontro un locator que cumpliera la condicion solicitada.")
+
+    def _build_wait_condition(self, locator: Tuple[str, str], attribute: str):
+        attribute_map = {
+            "clickable": EC.element_to_be_clickable,
+            "visible": EC.visibility_of_element_located,
+            "presence": EC.presence_of_element_located,
+            "all_visible": EC.visibility_of_all_elements_located,
+            "invisible": EC.invisibility_of_element_located,
+        }
+        if attribute not in attribute_map:
+            raise ValueError(f"Condicion '{attribute}' no soportada para esperas de locator.")
+        return attribute_map[attribute](locator)
 
     def wait_for_condition(self, predicate: Callable, timeout: int | None = None, poll_frequency: float = 0.2):
         self._ensure_driver()
