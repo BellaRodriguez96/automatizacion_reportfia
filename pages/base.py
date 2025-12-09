@@ -1,81 +1,357 @@
 import os
+import shutil
+import subprocess
+import sys
+import time
+from typing import Callable, Iterable, Sequence, Tuple
 
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import InvalidSessionIdException, NoSuchWindowException, TimeoutException, WebDriverException
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.service import Service as ChromeService
+from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 
-#  Configuración del perfil de Chrome para mantener sesiones y configuraciones
-CHROME_PROFILE_DIR = os.path.abspath("./.chrome-profile-reportfia")
-CHROME_SUBPROFILE  = "ReportFIAProfile"
+from helpers import config
+
+POST_ACTION_DELAY = float(os.getenv("REPORTFIA_ACTION_DELAY", "0.05"))
+DATA_ENTRY_DELAY = float(os.getenv("REPORTFIA_DATA_ENTRY_DELAY", "0.2"))
+POST_ACTION_SYNC = os.getenv("REPORTFIA_POST_ACTION_SYNC", "0").lower() in ("1", "true", "yes")
+
 
 class Base:
-    # Clase base para los Page Objects.
-    URL = "https://reportfia.deras.dev/"
+    """Utilidades base compartidas por todos los Page Objects."""
 
-    """
-    Clase Base mejorada:
-    - Acepta `driver` opcional en el constructor para permitir crear la
-      instancia antes de inicializar el WebDriver (útil en fixtures).
-    - `get_driver` ahora asigna `self.driver` y `self._wait`.
-    """
+    URL = f"{config.BASE_URL}/"
 
-    # Constructor que acepta un driver opcional
-    def __init__(self, driver=None, default_timeout: int = 30):
+    def __init__(self, driver=None, default_timeout: int = config.DEFAULT_WAIT_TIMEOUT):
         self.driver = driver
         self.default_timeout = default_timeout
         self._wait = WebDriverWait(self.driver, self.default_timeout) if self.driver else None
 
-    # Inicializa y devuelve el driver de Selenium.
-    def get_driver(self):
-        chrome_options = Options()
-        chrome_options.add_argument('--start-maximized')
-        chrome_options.add_argument(f"--user-data-dir={CHROME_PROFILE_DIR}")
-        chrome_options.add_argument(f"--profile-directory={CHROME_SUBPROFILE}")
-        driver = webdriver.Chrome(options=chrome_options)
-        # asociar driver a la instancia para que otros métodos puedan usarlo
+    # ------------------------------------------------------------------ #
+    #   WEB DRIVER
+    # ------------------------------------------------------------------ #
+    def get_driver(self, *, use_profile: bool = True):
+        browser = config.get_browser_choice()
+        if browser == "edge":
+            driver = self._build_edge_driver(use_profile)
+        else:
+            driver = self._build_chrome_driver(use_profile)
         self.driver = driver
         self._wait = WebDriverWait(self.driver, self.default_timeout)
         return driver
 
-    # Cierra el driver de Selenium.
+    def _build_chrome_driver(self, use_profile: bool):
+        chrome_options = ChromeOptions()
+        chrome_options.add_argument("--start-maximized")
+        chrome_options.page_load_strategy = "normal"
+        if use_profile:
+            chrome_options.add_argument(f"--user-data-dir={config.CHROME_PROFILE_DIR}")
+            chrome_options.add_argument(f"--profile-directory={config.CHROME_SUBPROFILE}")
+        driver_override = config.get_driver_override("chrome")
+        if driver_override:
+            service = ChromeService(executable_path=str(driver_override))
+        else:
+            try:
+                service = ChromeService(ChromeDriverManager().install())
+            except Exception as exc:
+                raise RuntimeError(
+                    "No se pudo obtener chromedriver. Define REPORTFIA_CHROME_DRIVER "
+                    "o coloca el binario en drivers/chromedriver.exe."
+                ) from exc
+        return webdriver.Chrome(service=service, options=chrome_options)
+
+    def _build_edge_driver(self, use_profile: bool):
+        edge_options = EdgeOptions()
+        edge_options.use_chromium = True
+        edge_options.add_argument("--start-maximized")
+        edge_options.page_load_strategy = "normal"
+        if use_profile:
+            edge_options.add_argument(f"--user-data-dir={config.CHROME_PROFILE_DIR}")
+            edge_options.add_argument(f"--profile-directory={config.CHROME_SUBPROFILE}")
+        driver_override = config.get_driver_override("edge")
+        if driver_override:
+            service = EdgeService(executable_path=str(driver_override))
+        else:
+            try:
+                service = EdgeService(EdgeChromiumDriverManager().install())
+            except Exception as exc:
+                raise RuntimeError(
+                    "No se pudo obtener msedgedriver. Define REPORTFIA_EDGE_DRIVER "
+                    "o coloca el binario en drivers/msedgedriver.exe."
+                ) from exc
+        return webdriver.Edge(service=service, options=edge_options)
+
     def quit_driver(self, driver):
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            # Cuando Chrome ya cerro la conexion HTTP puede lanzar ConnectionRefusedError.
+            # Lo ignoramos para no romper la suite.
+            pass
 
-    # Abre la URL principal del sitio en el navegador.
-    def open_page(self, driver=None):    
-        if driver is None:
-            driver = self.driver
-        driver.get(self.URL)
+    def reset_profile(self):
+        shutil.rmtree(config.CHROME_PROFILE_DIR, ignore_errors=True)
 
-    # Ingresa texto en un campo de entrada (input).
-    def enter_text(self, element, text):
-        element.clear()
-        element.send_keys(text)
+    def close_residual_browsers(self):
+        if not sys.platform.startswith("win"):
+            return
+        lingering = ("chromedriver.exe", "chrome.exe", "msedgedriver.exe", "msedge.exe")
+        for proc in lingering:
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", proc],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            except Exception:
+                continue
 
-    # Hace clic sobre un elemento WebElement.
-    def clickElement(self, element):
-        elem = self.wait_for(element, "clickable")
-        elem.click()
-
-    # Metodo wait para esperar condiciones en elementos
-    def wait_for(self, element, attribute):
-        """Espera hasta que un elemento tenga un atributo específico."""
+    def is_driver_alive(self) -> bool:
         if not self.driver:
-            raise RuntimeError("No WebDriver asociado a esta instancia de Base. Inicializa el driver antes de usar wait_for.")
-        wait = WebDriverWait(self.driver, self.default_timeout)
+            return False
+        try:
+            _ = self.driver.current_url
+            return True
+        except (InvalidSessionIdException, NoSuchWindowException, WebDriverException):
+            return False
 
+    # ------------------------------------------------------------------ #
+    #   UTILIDADES DE ESPERA / NAVEGACION
+    # ------------------------------------------------------------------ #
+    def _ensure_driver(self):
+        if not self.driver:
+            raise RuntimeError("No hay WebDriver inicializado para este PageObject.")
+
+    def open_page(self, driver=None, url: str | None = None, *, force_reload: bool = False):
+        driver = driver or self.driver
+        if not driver:
+            raise RuntimeError("No es posible abrir una pagina sin WebDriver.")
+        self.driver = driver
+        destino = (url or self.URL).rstrip("/")
+        if not force_reload and self._is_same_url(destino):
+            self.wait_for_page_ready(timeout=10)
+            return
+        driver.get(destino)
+        if not self._wait_for_navigation(destino):
+            # Algunos perfiles muestran la URL sin cargar; forzamos con JS como respaldo.
+            driver.execute_script("window.location.href = arguments[0];", destino)
+            self._wait_for_navigation(destino)
+        self._post_action_wait()
+
+    def _is_same_url(self, destino: str) -> bool:
+        if not self.driver:
+            return False
+        try:
+            current = (self.driver.current_url or "").rstrip("/")
+        except Exception:
+            return False
+        return current.endswith(destino)
+
+    def _wait_for_navigation(self, expected_url: str | None, timeout: int | None = None) -> bool:
+        limite = time.time() + (timeout or min(self.default_timeout, 10))
+        esperado = (expected_url or "").rstrip("/")
+        while time.time() < limite:
+            try:
+                current = self.driver.current_url
+                ready_state = self.driver.execute_script("return document.readyState")
+            except Exception:
+                time.sleep(0.2)
+                continue
+            if ready_state in ("interactive", "complete"):
+                if not esperado or esperado in current.rstrip("/"):
+                    return True
+            time.sleep(0.2)
+        return False
+
+    def wait_for_locator(self, locator: Tuple[str, str], attribute: str = "visible", timeout: int | None = None):
+        self._ensure_driver()
+        wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+        condition = self._build_wait_condition(locator, attribute)
+        return wait.until(condition)
+
+    def wait_for_any_locator(self, locators: Sequence[Tuple[str, str]], attribute: str = "visible", timeout: int | None = None, *, shared_timeout: bool = False):
+        self._ensure_driver()
+        if not locators:
+            raise ValueError("Se requiere al menos un locator para wait_for_any_locator.")
+        if shared_timeout:
+            wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+            conditions = [self._build_wait_condition(locator, attribute) for locator in locators]
+
+            def _match(driver):
+                for condition in conditions:
+                    result = condition(driver)
+                    if result:
+                        return result
+                return False
+
+            return wait.until(_match)
+
+        last_error: TimeoutException | None = None
+        for locator in locators:
+            try:
+                return self.wait_for_locator(locator, attribute, timeout=timeout)
+            except TimeoutException as exc:
+                last_error = exc
+                continue
+        raise last_error or TimeoutException("No se encontro un locator que cumpliera la condicion solicitada.")
+
+    def _build_wait_condition(self, locator: Tuple[str, str], attribute: str):
+        attribute_map = {
+            "clickable": EC.element_to_be_clickable,
+            "visible": EC.visibility_of_element_located,
+            "presence": EC.presence_of_element_located,
+            "all_visible": EC.visibility_of_all_elements_located,
+            "invisible": EC.invisibility_of_element_located,
+        }
+        if attribute not in attribute_map:
+            raise ValueError(f"Condicion '{attribute}' no soportada para esperas de locator.")
+        return attribute_map[attribute](locator)
+
+    def wait_for_condition(self, predicate: Callable, timeout: int | None = None, poll_frequency: float = 0.2):
+        self._ensure_driver()
+        end_time = time.time() + (timeout or self.default_timeout)
+        while time.time() < end_time:
+            try:
+                result = predicate(self.driver)
+            except Exception:
+                result = False
+            if result:
+                return result
+            time.sleep(poll_frequency)
+        raise TimeoutException("La condicion personalizada no se cumplio dentro del tiempo esperado.")
+
+    def wait_for_page_ready(self, timeout: int | None = None) -> bool:
+        """Bloquea hasta que el DOM este al menos en estado interactivo."""
+        self._ensure_driver()
+        wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+
+        def _ready(_driver):
+            try:
+                state = _driver.execute_script("return document.readyState")
+                return state in ("interactive", "complete")
+            except Exception:
+                return False
+
+        try:
+            wait.until(_ready)
+            return True
+        except TimeoutException:
+            return False
+
+    def wait_for(self, element, attribute):
+        """Compatibilidad con PageObjects antiguos que usan wait_for."""
+        self._ensure_driver()
+        wait = WebDriverWait(self.driver, self.default_timeout)
         attribute_map = {
             "clickable": EC.element_to_be_clickable(element),
             "visible": EC.visibility_of(element),
-            "invisible": EC.invisibility_of_element(element),
+            "invisible": EC.invisibility_of(element),
             "staleness": EC.staleness_of(element),
         }
-
         if attribute not in attribute_map:
-            raise ValueError(
-                f"Condición '{attribute}' no soportada. "
-                f"Usa: {list(attribute_map.keys())}"
-            )
-
+            raise ValueError(f"Condicion '{attribute}' no soportada.")
         return wait.until(attribute_map[attribute])
+
+    # ------------------------------------------------------------------ #
+    #   OPERACIONES COMUNES
+    # ------------------------------------------------------------------ #
+    def enter_text(self, element, text: str):
+        element.clear()
+        element.send_keys(text)
+        if DATA_ENTRY_DELAY > 0:
+            time.sleep(DATA_ENTRY_DELAY)
+        self._post_action_wait()
+
+    def type_into(self, locator: Tuple[str, str], text: str, *, clear: bool = True, wait_attr: str = "visible"):
+        element = self.wait_for_locator(locator, wait_attr)
+        if clear:
+            element.clear()
+        element.send_keys(text)
+        if DATA_ENTRY_DELAY > 0:
+            time.sleep(DATA_ENTRY_DELAY)
+        self._post_action_wait()
+        return element
+
+    def clickElement(self, element):
+        elem = self.wait_for(element, "clickable")
+        elem.click()
+        self._post_action_wait()
+
+    def safe_click(self, element):
+        self._ensure_driver()
+        try:
+            element.click()
+        except Exception:
+            self.driver.execute_script("arguments[0].click();", element)
+        self._post_action_wait()
+
+    def click_locator(self, locator: Tuple[str, str]):
+        element = self.wait_for_locator(locator, "clickable")
+        self.safe_click(element)
+        return element
+
+    def find(self, locator: Tuple[str, str]):
+        self._ensure_driver()
+        return self.driver.find_element(*locator)
+
+    def find_all(self, locator: Tuple[str, str]):
+        self._ensure_driver()
+        return self.driver.find_elements(*locator)
+
+    def scroll_into_view(self, element):
+        self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+
+    def wait_for_url_contains(self, fragment: str, timeout: int | None = None):
+        self._ensure_driver()
+        wait = WebDriverWait(self.driver, timeout or self.default_timeout)
+        wait.until(EC.url_contains(fragment))
+
+    def pause_for_visual(self, seconds: float = 2.0):
+        time.sleep(seconds)
+
+    def detect_http_500(self) -> bool:
+        html = self.driver.page_source.lower()
+        patterns: Iterable[str] = (
+            "500 internal server error",
+            "ha ocurrido un error inesperado",
+            "por favor vuelve a intentarlo mas tarde",
+        )
+        found = any(p in html for p in patterns)
+        if found:
+            time.sleep(3)
+        return found
+
+    def clear_storage(self):
+        if not self.driver:
+            return
+        try:
+            self.driver.delete_all_cookies()
+        except Exception:
+            pass
+        try:
+            self.driver.execute_script(
+                "window.localStorage.clear();"
+                "window.sessionStorage.clear();"
+                "if (window.indexedDB) {"
+                "var req = indexedDB.databases ? indexedDB.databases() : Promise.resolve([]);"
+                "req.then(function(list){list.forEach(function(db){indexedDB.deleteDatabase(db.name);});});}"
+            )
+        except Exception:
+            pass
+
+    def _post_action_wait(self, delay: float = POST_ACTION_DELAY):
+        """Anade un pequeno margen tras cada accion para no saturar la UI."""
+        if POST_ACTION_SYNC:
+            try:
+                self.wait_for_page_ready(timeout=1)
+            except Exception:
+                pass
+        if delay > 0:
+            time.sleep(delay)

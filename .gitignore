@@ -214,3 +214,9 @@ __marimo__/
 .idea
 *.sublime-project
 *.sublime-workspace
+allure-results/
+allure-report/
+node_modules
+package-lock.json
+package.json
+.allure

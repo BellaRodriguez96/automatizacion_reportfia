@@ -8,14 +8,11 @@ class HomePage(Base):
 
     # Constructor de la página de Login.
     def __init__(self, driver):
-        """
-        Constructor de la página de Home de instancia de WebDriver.
-        """
-        self.driver = driver
+        super().__init__(driver)
 
     # Métodos get que retornan los elementos WebElement.
     def get_loginButton(self):
-        return self.driver.find_element(By.LINK_TEXT, self.loginButton_str)
-    
+        return self.wait_for_locator((By.LINK_TEXT, self.loginButton_str), "visible")
+
     def get_signUpButton(self):
-        return self.driver.find_element(By.LINK_TEXT, self.signUpButton_str)
+        return self.wait_for_locator((By.LINK_TEXT, self.signUpButton_str), "visible")
