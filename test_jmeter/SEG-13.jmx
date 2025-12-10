@@ -9,27 +9,52 @@
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
     </TestPlan>
     <hashTree>
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="SEG-08">
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="SEG-13">
         <intProp name="ThreadGroup.num_threads">1</intProp>
         <intProp name="ThreadGroup.ramp_time">1</intProp>
         <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
         <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
         <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller">
-          <stringProp name="LoopController.loops">10</stringProp>
+          <stringProp name="LoopController.loops">1</stringProp>
           <boolProp name="LoopController.continue_forever">false</boolProp>
         </elementProp>
       </ThreadGroup>
       <hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor" enabled="true">
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor">
           <stringProp name="scriptLanguage">groovy</stringProp>
           <stringProp name="parameters"></stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="cacheKey">true</stringProp>
-          <stringProp name="script">def cookieManager = ctx.getThreadGroup().getCookieManager()
-cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;) }</stringProp>
+          <stringProp name="script">import org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase
+
+def sampler = ctx.getCurrentSampler()
+
+// Si el sampler NO es HTTP, salir sin hacer nada
+if (!(sampler instanceof HTTPSamplerBase)) {
+    log.info(&quot;JSR223 PreProcessor: Sampler no HTTP, se omite limpieza de cookies.&quot;)
+    return
+}
+
+def cookieManager = sampler.getCookieManager()
+
+if (cookieManager == null) {
+    log.warn(&quot;JSR223 PreProcessor: No existe CookieManager.&quot;)
+    return
+}
+
+def cookies = cookieManager.cookies
+
+for (int i = cookies.size() - 1; i &gt;= 0; i--) {
+    def c = cookies.get(i)
+    if (c.name.contains(&quot;remember_web&quot;)) {
+        cookies.remove(i)
+        log.info(&quot;Cookie remember_web eliminada.&quot;)
+    }
+}
+</stringProp>
         </JSR223PreProcessor>
         <hashTree/>
-        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults" enabled="true">
+        <ConfigTestElement guiclass="HttpDefaultsGui" testclass="ConfigTestElement" testname="HTTP Request Defaults">
           <stringProp name="HTTPSampler.domain">reportfia.deras.dev</stringProp>
           <stringProp name="HTTPSampler.protocol">https</stringProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
@@ -44,7 +69,8 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
           <boolProp name="CookieManager.controlledByThreadGroup">false</boolProp>
         </CookieManager>
         <hashTree/>
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request [GET] /iniciar-sesion" enabled="true">
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request [GET] /iniciar-sesion">
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
           <stringProp name="HTTPSampler.path">/iniciar-sesion</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">GET</stringProp>
@@ -55,7 +81,7 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
           </elementProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="CSRF_TOKEN" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="CSRF_TOKEN">
             <stringProp name="RegexExtractor.useHeaders">false</stringProp>
             <stringProp name="RegexExtractor.refname">CSRF_TOKEN</stringProp>
             <stringProp name="RegexExtractor.regex">&lt;meta name=&quot;csrf-token&quot; content=&quot;(.+?)&quot;</stringProp>
@@ -65,7 +91,7 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
             <stringProp name="RegexExtractor.match_number">1</stringProp>
           </RegexExtractor>
           <hashTree/>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="XSRF_COOKIE" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="XSRF_COOKIE">
             <stringProp name="RegexExtractor.useHeaders">true</stringProp>
             <stringProp name="RegexExtractor.refname">XSRF_COOKIE</stringProp>
             <stringProp name="RegexExtractor.regex">XSRF-TOKEN=([^;]+)</stringProp>
@@ -75,7 +101,7 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
             <stringProp name="RegexExtractor.match_number">1</stringProp>
           </RegexExtractor>
           <hashTree/>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="SESSION_COOKIE" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="SESSION_COOKIE">
             <stringProp name="RegexExtractor.useHeaders">true</stringProp>
             <stringProp name="RegexExtractor.refname">SESSION_COOKIE</stringProp>
             <stringProp name="RegexExtractor.regex">reportfia_session=([^;]+)</stringProp>
@@ -85,7 +111,7 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
             <stringProp name="RegexExtractor.match_number">1</stringProp>
           </RegexExtractor>
           <hashTree/>
-          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="CSRF_TOKEN" enabled="true">
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="CSRF_TOKEN">
             <stringProp name="RegexExtractor.useHeaders">false</stringProp>
             <stringProp name="RegexExtractor.refname">CSRF_TOKEN</stringProp>
             <stringProp name="RegexExtractor.regex">name=&quot;_token&quot;\s+value=&quot;([^&quot;]+)&quot; </stringProp>
@@ -97,78 +123,92 @@ cookieManager.getCookies().removeIf { it.name.contains(&quot;remember_web&quot;)
           <hashTree/>
         </hashTree>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="HTTP Request [POST] /iniciar-sesion">
+          <stringProp name="HTTPSampler.domain">reportfia.deras.dev</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
           <stringProp name="HTTPSampler.path">/iniciar-sesion</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
           <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
           <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">_token=${CSRF_TOKEN}&amp;carnet=aa11001&amp;password=passErronea123&amp;remember=on</stringProp>
+                <stringProp name="Argument.value">_token=${CSRF_TOKEN}&amp;carnet=aa11001&amp;password=pass123&amp;remember=on</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
           </elementProp>
+          <stringProp name="HTTPSampler.implementation">HttpClient4</stringProp>
         </HTTPSamplerProxy>
         <hashTree>
-          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor">
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="JSR223 PostProcessor">
             <stringProp name="cacheKey">true</stringProp>
             <stringProp name="filename"></stringProp>
             <stringProp name="parameters"></stringProp>
-            <stringProp name="script">import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.net.URLDecoder;
+            <stringProp name="script">def sampler = ctx.getCurrentSampler()
 
-// ========================
-// Manejo de XSRF_COOKIE
-// ========================
-String encodedXsrf = vars.get(&quot;XSRF_COOKIE&quot;);
-
-if (encodedXsrf == null || encodedXsrf.isEmpty()) {
-    log.warn(&quot;XSRF_COOKIE is null or empty!&quot;);
-    vars.put(&quot;XSRF_COOKIE_FORMAT&quot;, &quot;&quot;); 
-} else {
-    String decodedXsrf = URLDecoder.decode(encodedXsrf, &quot;UTF-8&quot;);
-    vars.put(&quot;XSRF_COOKIE_FORMAT&quot;, decodedXsrf);
+if (!(sampler instanceof org.apache.jmeter.protocol.http.sampler.HTTPSamplerBase)) {
+    // No es un HTTP sampler → no hagas nada.
+    return
 }
 
-// ========================
-// Manejo de CSRF_TOKEN
-// ========================
-String encodedCsrf = vars.get(&quot;CSRF_TOKEN&quot;);
+def cookieManager = sampler.getCookieManager()
 
-if (encodedCsrf == null || encodedCsrf.isEmpty()) {
-    log.warn(&quot;CSRF_TOKEN is null or empty!&quot;);
-    vars.put(&quot;CSRF_TOKEN_FORMAT&quot;, &quot;&quot;); 
-} else {
-    String decodedCsrf = URLDecoder.decode(encodedCsrf, &quot;UTF-8&quot;);
-    vars.put(&quot;CSRF_TOKEN_FORMAT&quot;, decodedCsrf);
+if (!cookieManager) {
+    return
 }
 
-// ========================
-// CAPTURA DEL MENSAJE DE ERROR &quot;const errs = [...]&quot;
-// ========================
+def cookies = cookieManager.cookies
 
-// Obtengo el Response Body del sampler anterior
-String response = prev.getResponseDataAsString();
-
-String mensajeExtraido = &quot;&quot;;
-Pattern p = Pattern.compile(&quot;errs\\s*=\\s*\\[\\s*\&quot;([^\&quot;]+)\&quot;&quot;);
-Matcher m = p.matcher(response);
-
-if (m.find()) {
-    mensajeExtraido = m.group(1);
-    vars.put(&quot;mensaje_credenciales&quot;, mensajeExtraido);
-    log.info(&quot;Mensaje capturado: &quot; + mensajeExtraido);
-} else {
-    vars.put(&quot;mensaje_credenciales&quot;, &quot;NONE&quot;);
-    log.warn(&quot;NO se encontró el mensaje de credenciales en la respuesta.&quot;);
+for (int i = cookies.size() - 1; i &gt;= 0; i--) {
+    def c = cookies.get(i)
+    if (c.name.contains(&quot;remember_web&quot;)) {
+        cookies.remove(i)
+        log.info(&quot;Cookie remember_web eliminada.&quot;)
+    }
 }
 </stringProp>
             <stringProp name="scriptLanguage">groovy</stringProp>
-          </JSR223PreProcessor>
+          </JSR223PostProcessor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Strict-Transport-Security">
+            <stringProp name="RegexExtractor.useHeaders">true</stringProp>
+            <stringProp name="RegexExtractor.refname">Strict-Transport-Security</stringProp>
+            <stringProp name="RegexExtractor.regex">Strict-Transport-Security:\s*(.+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">NO_HEADER</stringProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+            <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+          </RegexExtractor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="X-Frame-Options">
+            <stringProp name="RegexExtractor.useHeaders">true</stringProp>
+            <stringProp name="RegexExtractor.refname">X-Frame-Options</stringProp>
+            <stringProp name="RegexExtractor.regex">X-Frame-Options:\s*(.+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">NO_HEADER</stringProp>
+            <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+          </RegexExtractor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Content-Security-Policy">
+            <stringProp name="RegexExtractor.useHeaders">true</stringProp>
+            <stringProp name="RegexExtractor.refname">Content-Security-Policy </stringProp>
+            <stringProp name="RegexExtractor.regex">Content-Security-Policy:\s*(.+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">NO_HEADER</stringProp>
+            <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+          </RegexExtractor>
+          <hashTree/>
+          <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="X-Content-Type-Options">
+            <stringProp name="RegexExtractor.useHeaders">true</stringProp>
+            <stringProp name="RegexExtractor.refname">X-Content-Type-Options</stringProp>
+            <stringProp name="RegexExtractor.regex">X-Content-Type-Options:\s*(.+)</stringProp>
+            <stringProp name="RegexExtractor.template">$1$</stringProp>
+            <stringProp name="RegexExtractor.default">NO_HEADER</stringProp>
+            <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
+            <stringProp name="RegexExtractor.match_number">1</stringProp>
+          </RegexExtractor>
           <hashTree/>
           <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="HTTP Header Manager">
             <collectionProp name="HeaderManager.headers">
@@ -204,78 +244,34 @@ if (m.find()) {
           </HeaderManager>
           <hashTree/>
         </hashTree>
-        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="JSR223 PreProcessor">
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="JSR223 Sampler">
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="filename"></stringProp>
           <stringProp name="parameters"></stringProp>
-          <stringProp name="script">import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.net.URLDecoder;
+          <stringProp name="script">def keys = [
+    &quot;Strict-Transport-Security&quot;,
+    &quot;Content-Security-Policy&quot;,
+    &quot;X-Frame-Options&quot;,
+    &quot;X-Content-Type-Options&quot;,
+    &quot;cert_valid&quot;,
+    &quot;cert_subject&quot;
+]
 
-// ========================
-// Manejo de XSRF_COOKIE
-// ========================
-String encodedXsrf = vars.get(&quot;XSRF_COOKIE&quot;);
+log.info(&quot;======= VARIABLES DE SEGURIDAD =======&quot;)
 
-if (encodedXsrf == null || encodedXsrf.isEmpty()) {
-    log.warn(&quot;XSRF_COOKIE is null or empty!&quot;);
-    vars.put(&quot;XSRF_COOKIE_FORMAT&quot;, &quot;&quot;); 
-} else {
-    String decodedXsrf = URLDecoder.decode(encodedXsrf, &quot;UTF-8&quot;);
-    vars.put(&quot;XSRF_COOKIE_FORMAT&quot;, decodedXsrf);
+keys.each { k -&gt;
+    log.info(&quot;${k} = ${vars.get(k)}&quot;)
 }
 
-// ========================
-// Manejo de CSRF_TOKEN
-// ========================
-String encodedCsrf = vars.get(&quot;CSRF_TOKEN&quot;);
+log.info(&quot;======================================&quot;)
 
-if (encodedCsrf == null || encodedCsrf.isEmpty()) {
-    log.warn(&quot;CSRF_TOKEN is null or empty!&quot;);
-    vars.put(&quot;CSRF_TOKEN_FORMAT&quot;, &quot;&quot;); 
-} else {
-    String decodedCsrf = URLDecoder.decode(encodedCsrf, &quot;UTF-8&quot;);
-    vars.put(&quot;CSRF_TOKEN_FORMAT&quot;, decodedCsrf);
-}
+// 🔥 Esto hace que SOLO esas variables aparezcan en View Results Tree → Response Data
+def textResult = keys.collect { k -&gt; &quot;${k} = ${vars.get(k)}&quot; }.join(&quot;\n&quot;)
 
-// ========================
-// CAPTURA DEL MENSAJE DE ERROR &quot;const errs = [...]&quot;
-// ========================
-
-// Obtengo el Response Body del sampler anterior
-String response = prev.getResponseDataAsString();
-
-String mensajeExtraido = &quot;&quot;;
-Pattern p = Pattern.compile(&quot;errs\\s*=\\s*\\[\\s*\&quot;([^\&quot;]+)\&quot;&quot;);
-Matcher m = p.matcher(response);
-
-if (m.find()) {
-    mensajeExtraido = m.group(1);
-    vars.put(&quot;mensaje_credenciales&quot;, mensajeExtraido);
-    log.info(&quot;Mensaje capturado: &quot; + mensajeExtraido);
-} else {
-    vars.put(&quot;mensaje_credenciales&quot;, &quot;NONE&quot;);
-    log.warn(&quot;NO se encontró el mensaje de credenciales en la respuesta.&quot;);
-}
+SampleResult.setResponseData(textResult, &quot;UTF-8&quot;)
 </stringProp>
           <stringProp name="scriptLanguage">groovy</stringProp>
-        </JSR223PreProcessor>
-        <hashTree/>
-        <RegexExtractor guiclass="RegexExtractorGui" testclass="RegexExtractor" testname="Regular Expression Extractor">
-          <stringProp name="RegexExtractor.useHeaders">false</stringProp>
-          <stringProp name="RegexExtractor.refname">mensaje_credenciales</stringProp>
-          <stringProp name="RegexExtractor.regex"></stringProp>
-          <stringProp name="RegexExtractor.template"></stringProp>
-          <stringProp name="RegexExtractor.default"></stringProp>
-          <boolProp name="RegexExtractor.default_empty_value">false</boolProp>
-          <stringProp name="RegexExtractor.match_number"></stringProp>
-        </RegexExtractor>
-        <hashTree/>
-        <DebugSampler guiclass="TestBeanGUI" testclass="DebugSampler" testname="Debug Sampler">
-          <boolProp name="displayJMeterProperties">false</boolProp>
-          <boolProp name="displayJMeterVariables">true</boolProp>
-          <boolProp name="displaySystemProperties">false</boolProp>
-        </DebugSampler>
+        </JSR223Sampler>
         <hashTree/>
         <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
@@ -351,7 +347,7 @@ if (m.find()) {
           <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
-        <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results">
+        <ResultCollector guiclass="GraphVisualizer" testclass="ResultCollector" testname="Graph Results" enabled="true">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
